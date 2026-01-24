@@ -1,0 +1,219 @@
+[
+    {
+        "item": "Broccoli, BROCOLI (1\") COLD",
+        "inventory_by": "Crock",
+        "up100": 0.94,
+        "open": { "build1": 4 },
+        "close": { "build2": 4 }
+    },
+    {
+        "item": "Sliced Pot for Scalloped Pot",
+        "inventory_by": "Lexan",
+        "up100": 0.35,
+        "open": { "build1": 1 },
+        "close": { "build2": 1 }
+    },
+    {
+        "item": "Cabbage, REPOLLO (1\")",
+        "inventory_by": "Lexan",
+        "up100": 0.31,
+        "open": { "build1": 3 },
+        "close": { "build2": 3 }
+    },
+    {
+        "item": "Carrots, ZANAHORIAS Shredded",
+        "inventory_by": "Tub",
+        "up100": 0.4,
+        "open": { "build1": 1 },
+        "close": { "build2": 1 }
+    },
+    {
+        "item": "Carrots, ZANAHORIAS Sliced Hot Bar",
+        "inventory_by": "Lexan",
+        "up100": 0.35,
+        "open": { "build1": 1 },
+        "close": { "build2": 1 }
+    },
+    {
+        "item": "Cucumbers, PEPINO Sliced (3/16\")",
+        "inventory_by": "Tub",
+        "up100": 0.4,
+        "open": { "build1": 1 },
+        "close": { "build2": 1 }
+    },
+    {
+        "item": "Eggs, HUEVOS, Diced (38\" x 1/2\")",
+        "inventory_by": "Tub",
+        "up100": 0.4,
+        "open": { "build1": 2 },
+        "close": { "build2": 2 }
+    },
+    {
+        "item": "Develed Eggs, HUEVOS RELLENOS",
+        "inventory_by": "Sheet Pan",
+        "up100": 0.17,
+        "open": { "build1": 1 },
+        "close": { "build2": 1 }
+    },
+    {
+        "item": "ORANGES",
+        "inventory_by": "Tub",
+        "up100": 0.17,
+        "open": { "build1": 1 },
+        "close": { "build2": 1 }
+    },
+    {
+        "item": "Cantaloupe",
+        "inventory_by": "Tub",
+        "up100": 0.17,
+        "open": { "build1": 1 },
+        "close": { "build2": 1 }
+    },
+    {
+        "item": "Lemons, LIMONES Wedges (6 Wedges)",
+        "inventory_by": "Tub",
+        "up100": 0.15,
+        "open": { "build1": 1 },
+        "close": { "build2": 1 }
+    },
+    {
+        "item": "Ranch",
+        "inventory_by": "Tub",
+        "up100": "",
+        "open": { "build1": 1 },
+        "close": { "build2": 1 }
+    },
+    {
+        "item": "Spring Mix, ensalada de spring",
+        "inventory_by": "",
+        "up100": "",
+        "open": { "build1": 2 },
+        "close": { "build2": 2 }
+    },
+    {
+        "item": "romiane, ensalada de spring",
+        "inventory_by": "",
+        "up100": "",
+        "open": { "build1": 1 },
+        "close": { "build2": 1 }
+    },
+    {
+        "item": "LETTUCE, LECHUGA",
+        "inventory_by": "Tub",
+        "up100": "",
+        "open": { "build1": 2 },
+        "close": { "build2": 2 }
+    },
+    {
+        "item": "Cold Bar Onions Sliced (red), CEBOLLA",
+        "inventory_by": "Crock",
+        "up100": 0.53,
+        "open": { "build1": 3 },
+        "close": { "build2": 3 }
+    },
+    {
+        "item": " ",
+        "inventory_by": "Tub",
+        "up100": 1.17,
+        "open": { "build1": "?" },
+        "close": { "build2": "?"  }
+    },
+    {
+        "item": "Onion, and Pepper, CEBOLLAS Y PIMIENTOS",
+        "inventory_by": "Lexan",
+        "up100": 0.35,
+        "open": { "build1": 2 },
+        "close": { "build2": 2 }
+    },
+    {
+        "item": "Pepper Strips, TIRAS DE PIMIENTOS",
+        "inventory_by": "Crock",
+        "up100": 0.35,
+        "open": { "build1": 3 },
+        "close": { "build2": 3 }
+    },
+    {
+        "item": "Pot Roast Vegetables, ASADO A LA OLLA",
+        "inventory_by": "1/2 Pan",
+        "up100": 0.35,
+        "open": { "build1": 2 },
+        "close": { "build2": 2 }
+    },
+    {
+        "item": "Collard Greens, berdes",
+        "inventory_by": "Lexan",
+        "up100": "",
+        "open": { "build1": 5 },
+        "close": { "build2": 5 }
+    },
+    {
+        "item": "Ham",
+        "inventory_by": "Tub",
+        "up100": "",
+        "open": { "build1": 1 },
+        "close": { "build2": 1 }
+    },
+    {
+        "item": "Brocoli Salad, ensalada de brocoli",
+        "inventory_by": "1/2 Pan",
+        "up100": 0.35,
+        "open": { "build1": 1 },
+        "close": { "build2": 1 }
+    },
+    {
+        "item": "Salad, Seafood, MARISCOS",
+        "inventory_by": "Crock",
+        "up100": 0.2,
+        "open": { "build1": 1 },
+        "close": { "build2": 1 }
+    },
+    {
+        "item": "Tomato, Wedges, TOMATE",
+        "inventory_by": "Crock",
+        "up100": 0.5,
+        "open": { "build1": 3 },
+        "close": { "build2": 3 }
+    },
+    {
+        "item": "Zucchini (3/8\"), CALABACIN",
+        "inventory_by": "Lexan",
+        "up100": 0.3,
+        "open": { "build1": 2 },
+        "close": { "build2": 2 }
+    },
+    {
+        "item": "Mushroom, whole washed, CHAMPINON",
+        "inventory_by": "Lexan",
+        "up100": 0.17,
+        "open": { "build1": 2 },
+        "close": { "build2": 2 }
+    },
+    {
+        "item": "Mushroom, Sliced, CHAMPINON",
+        "inventory_by": "Tub",
+        "up100": 0.35,
+        "open": { "build1": "1/2" },
+        "close": { "build2": "1/2" }
+    },
+    {
+        "item": "Lettuce Cups, LECHUGA",
+        "inventory_by": "Crock",
+        "up100": 0.001,
+        "open": { "build1": 1 },
+        "close": { "build2": 1 }
+    },
+    {
+        "item": "Tomato for burgers, TOMATE",
+        "inventory_by": "Crock",
+        "up100": 0.001,
+        "open": { "build1": 1 },
+        "close": { "build2": 1 }
+    },
+    {
+        "item": "Onion Rings, CEBOLLA",
+        "inventory_by": "Crock",
+        "up100": 0.04,
+        "open": { "build1": 2 },
+        "close": { "build2": 2 }
+    }
+]
