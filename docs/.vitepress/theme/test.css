@@ -1,0 +1,349 @@
+:root {
+  --vp-c-brand-1: #ff7a00;
+  --vp-c-brand-2: #ff8c1a;
+  --vp-c-brand-3: #ff9d33;
+
+  /* LIGHT MODE BACKGROUNDS */
+  --vp-c-bg: #ffffff;
+  --vp-c-bg-soft: #f3f4f6;
+  --vp-c-bg-mute: #e5e7eb;
+
+  /* LIGHT MODE TEXT */
+  --vp-c-text-1: #1f2937;
+  --vp-c-text-2: #4b5563;
+}
+
+.dark {
+  --vp-c-bg: #0f1117;
+  --vp-c-bg-soft: #1a1f2b;
+  --vp-c-bg-mute: #222838;
+
+  --vp-c-text-1: #ffffff;
+  --vp-c-text-2: #9aa4b2;
+}
+
+:root {
+  --vp-c-gray-1: #dddde3;
+  --vp-c-gray-2: #e4e4e9;
+  --vp-c-gray-3: #ebebef;
+  --vp-c-gray-soft: rgba(142, 150, 170, 0.14);
+
+  --vp-c-indigo-1: #3451b2;
+  --vp-c-indigo-2: #3a5ccc;
+  --vp-c-indigo-3: #5672cd;
+  --vp-c-indigo-soft: rgba(100, 108, 255, 0.14);
+
+  --vp-c-purple-1: #6f42c1;
+  --vp-c-purple-2: #7e4cc9;
+  --vp-c-purple-3: #8e5cd9;
+  --vp-c-purple-soft: rgba(159, 122, 234, 0.14);
+
+  --vp-c-green-1: #18794e;
+  --vp-c-green-2: #299764;
+  --vp-c-green-3: #30a46c;
+  --vp-c-green-soft: rgba(16, 185, 129, 0.14);
+
+  --vp-c-yellow-1: #915930;
+  --vp-c-yellow-2: #946300;
+  --vp-c-yellow-3: #9f6a00;
+  --vp-c-yellow-soft: rgba(234, 179, 8, 0.14);
+
+  --vp-c-red-1: #b8272c;
+  --vp-c-red-2: #d5393e;
+  --vp-c-red-3: #e0575b;
+  --vp-c-red-soft: rgba(244, 63, 94, 0.14);
+  --vp-c-sponsor: #db2777;
+}
+
+/* HERO */
+.hero {
+  padding: 60px 20px 30px;
+}
+
+.hero h1 {
+  font-size: 48px;
+  color: #ff7a00;
+  margin-bottom: 10px;
+}
+
+.hero p {
+  font-size: 18px;
+  color: var(--vp-c-text-2);
+  max-width: 600px;
+}
+
+/* BUTTONS */
+.hero-buttons {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: #2a2f3a;
+  color: white;
+  text-decoration: none;
+  font-size: 14px;
+  transition: 0.2s;
+}
+
+.btn:hover {
+  background: #3a4150;
+}
+
+.btn.primary {
+  background: #ff7a00;
+}
+
+.btn.primary:hover {
+  background: #ff8c1a;
+}
+
+/* GRID */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  padding: 40px 20px;
+}
+
+/* CARD */
+.card {
+  background: var(--vp-c-bg-soft);
+  border-radius: 14px;
+  padding: 20px;
+  text-decoration: none;
+  color: var(--vp-c-text-1);
+  transition: 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  background: var(--vp-c-bg-mute);
+  box-shadow: 0 0 20px rgba(255, 122, 0, 0.15);
+}
+
+.card p {
+  color: var(--vp-c-text-2);
+  font-size: 14px;
+}
+
+/* ICON */
+.icon {
+  font-size: 24px;
+  background: #2a2f3a;
+  padding: 10px;
+  border-radius: 10px;
+  width: fit-content;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .hero {
+    padding: 40px 15px;
+  }
+
+  .hero h1 {
+    font-size: 32px;
+  }
+
+  .card-grid {
+    padding: 20px 15px;
+    gap: 15px;
+  }
+
+  .hero-buttons {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* LIGHT MODE SIDEBAR + NAVBAR */
+:root .VPSidebar,
+:root .VPNavBar {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+}
+
+:root .VPSidebar {
+  width: 260px !important;
+  border-right: 1px solid #e5e7eb !important;
+}
+
+/* Light mode dividers */
+:root .VPSidebar .group + .group {
+  border-top: 1px solid #d1d5db !important;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+/* Light mode links */
+:root .VPSidebar .group .items .item a {
+  color: #4b5563 !important;
+  border-left: 3px solid transparent;
+}
+
+:root .VPSidebar .group .items .item a:hover {
+  background-color: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+:root .VPSidebar .group .items .item.is-active a {
+  border-left-color: #8b5cf6 !important;
+  background-color: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+/* LIGHT MODE TOC */
+:root .VPDocAside {
+  border-left: 1px solid #e5e7eb !important;
+}
+
+:root .VPDocAside .title {
+  color: #374151 !important;
+}
+
+:root .VPDocAside .outline-link {
+  color: #4b5563 !important;
+}
+
+:root .VPDocAside .outline-link.active {
+  color: #111827 !important;
+  border-left-color: #8b5cf6 !important;
+}
+
+/* DARK MODE SIDEBAR + NAVBAR */
+.dark .VPSidebar,
+.dark .VPNavBar {
+  background-color: #0d1117 !important;
+}
+
+.dark .VPSidebar {
+  width: 260px !important;
+  border-right: 1px solid #1f2330 !important;
+}
+
+/* Strong dividers */
+.dark .VPSidebar .group + .group {
+  border-top: 1px solid #2a2f3d !important;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+/* Sidebar text */
+.dark .VPSidebar .group .title {
+  color: #e5e7eb !important;
+}
+
+/* Sidebar links */
+.dark .VPSidebar .group .items .item a {
+  color: #cbd5e1 !important;
+  border-left: 3px solid transparent;
+}
+
+/* Hover */
+.dark .VPSidebar .group .items .item a:hover {
+  background: linear-gradient(to right, #1a1f2b, #0d1117);
+  color: #ffffff !important;
+}
+
+/* Active */
+.dark .VPSidebar .group .items .item.is-active a {
+  border-left-color: #8b5cf6 !important;
+  background-color: #1a1f2b !important;
+  color: #ffffff !important;
+}
+
+/* DARK MODE TOC */
+.dark .VPDocAside {
+  border-left: 1px solid #2a2f3d !important;
+}
+
+.dark .VPDocAside .title {
+  color: #e5e7eb !important;
+}
+
+.dark .VPDocAside .outline-link {
+  color: #cbd5e1 !important;
+}
+
+.dark .VPDocAside .outline-link.active {
+  color: #ffffff !important;
+  border-left-color: #8b5cf6 !important;
+}
+
+/* REMOVE ORANGE UNDERLINES (GLOBAL FIX) */
+a,
+a:visited,
+a:hover,
+a:active {
+  text-decoration: none !important;
+  box-shadow: none !important;
+  border-bottom: none !important;
+}
+
+/* Remove VitePress link underline effect */
+.VPDoc a {
+  text-decoration: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove heading anchor underline */
+.header-anchor {
+  text-decoration: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove active TOC underline */
+.VPDocAside .outline-link.active {
+  text-decoration: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove hover underline in TOC */
+.VPDocAside .outline-link:hover {
+  text-decoration: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove underline from sidebar items */
+.VPSidebar .item a {
+  text-decoration: none !important;
+  box-shadow: none !important;
+}
+
+.custom-block.tip a,
+.custom-block.tip code {
+  color: var(--vp-c-brand-1);
+}
+.custom-block .custom {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.VPNavBarMenuLink .active {
+  color: var(--vp-c-brand-1) !important;
+}
+
+.VPNavBarMenuLink.active::after {
+  content: '';
+  display: block;
+  height: 2px;
+  background: var(--vp-c-brand-1);
+  margin-top: 4px;
+}
+
+.VPNavBarMenuLink.active {
+  text-shadow: 0 0 8px rgba(255, 122, 0, 0.4);
+}
