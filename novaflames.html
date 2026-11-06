@@ -1,0 +1,3231 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>NovaFlames</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+/* Layout: four columns on desktop (server rail, channels, chat, members). Members hide under 900px; channels become a drawer under 700px. */
+:root {
+  --rail: #1e1f22;
+  --side: #2b2d31;
+  --bg: #313338;
+  --raise: #383a40;
+  --line: #3f4147;
+  --fg: #f2f3f5;
+  --muted: #b5bac1;
+  --ember: #ff4a2b;
+  --amber: #ff9a3c;
+  --gold: #ffd76a;
+  --nova: #8a5cff;
+  --online: #3ddc97;
+  --font-display: "Sora", "Segoe UI", system-ui, sans-serif;
+  --font-body: "DM Sans", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body);
+  font-size: 15px; overflow: hidden;
+}
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+button:focus-visible, textarea:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.app { display: grid; grid-template-columns: 72px 240px minmax(0, 1fr) 232px; height: 100%; }
+.app.dm-view { grid-template-columns: 72px 240px minmax(0, 1fr) 280px 60px; }
+.app.dm-view.profile-hidden { grid-template-columns: 72px 240px minmax(0, 1fr) 60px; }
+.app.dm-view.dm-section-view { grid-template-columns: 72px 240px minmax(0, 1fr); }
+.app.dm-view.dm-section-view .dm-profile, .app.dm-view.dm-section-view .friends-rail { display: none; }
+
+/* server rail */
+.rail {
+  background: var(--rail); display: flex; flex-direction: column; align-items: center;
+  gap: 10px; padding: 12px 0; overflow-y: auto;
+  padding-left: env(safe-area-inset-left, 0px);
+}
+.srv {
+  width: 48px; height: 48px; border-radius: 50%; background: var(--raise);
+  display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 14px;
+  transition: border-radius .15s, background .15s, color .15s; position: relative; flex: none;
+}
+.srv:hover, .srv.on { border-radius: 16px; }
+.srv.on { background: linear-gradient(160deg, var(--ember), var(--amber)); color: #1a0d08; }
+.srv.on::before { content: ""; position: absolute; left: -12px; width: 4px; height: 30px; border-radius: 0 3px 3px 0; background: var(--fg); }
+.srv.home { background: transparent; }
+.srv.home.on { background: #5865f2; color: #fff; }
+.srv.home.on::before { background: #fff; }
+.srv.home svg { width: 31px; height: 44px; overflow: visible; }
+.app.dm-view .members:not(.dm-profile) { display: none; }
+.friends-rail {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0;
+  padding: 14px 8px; overflow-y: auto; border-left: 1px solid var(--rail); background: #232429;
+}
+.friends-rail[hidden] { display: none; }
+.friend-rail-title { margin-bottom: 3px; color: var(--muted); font-size: 10px; font-weight: 700; writing-mode: vertical-rl; }
+.friend-avatar {
+  position: relative; display: grid; width: 38px; height: 38px; flex: none; place-items: center;
+  border: 2px solid transparent; border-radius: 50%; color: #1a0d08; font-size: 14px; font-weight: 700;
+}
+.friend-avatar:hover, .friend-avatar.on { border-color: #fff; border-radius: 13px; }
+.friend-avatar::after {
+  position: absolute; right: -3px; bottom: -3px; width: 12px; height: 12px; border: 2px solid #232429;
+  border-radius: 50%; background: var(--online); content: "";
+}
+.friend-avatar.away::after { background: var(--amber); }
+.friend-avatar.offline::after { background: #777b83; }
+.friend-avatar.group { color: #f3e7ff; background: linear-gradient(145deg,#8a5cff,#d253ad); }
+.srv.add { color: var(--online); font-size: 24px; }
+.srv.add:hover { background: var(--online); color: #15241b; }
+.sep { width: 32px; height: 2px; background: var(--line); border-radius: 1px; flex: none; }
+
+/* channel list */
+.side { background: var(--side); display: flex; flex-direction: column; min-width: 0; }
+.side header {
+  height: 52px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between;
+  font-family: var(--font-display); font-weight: 700; border-bottom: 1px solid var(--rail); flex: none;
+}
+.side header span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side header span { min-width: 0; flex: 1; }
+.side.dm-side header { height: 52px; }
+.side.dm-side > header { display: none; }
+.side-header-actions { display: flex; flex: none; align-items: center; gap: 4px; }
+.side-header-actions[hidden] { display: none; }
+.side-add, .top-action {
+  display: grid; width: 30px; height: 30px; flex: none; place-items: center; border: 0; border-radius: 6px;
+  background: transparent; color: var(--muted); cursor: pointer; font-size: 20px;
+}
+.side-add:hover, .top-action:hover { background: var(--raise); color: var(--fg); }
+.chans { padding: 12px 8px; overflow-y: auto; flex: 1; }
+.dm-find-button {
+  display: flex; width: 100%; height: 38px; align-items: center; gap: 9px; margin: 0 0 14px; padding: 0 10px;
+  border: 1px solid #202127; border-radius: 6px; background: #202127; color: var(--muted);
+  font-size: 12px; text-align: left;
+}
+.dm-find-button:hover { border-color: #555862; background: #25262b; color: var(--fg); }
+.dm-find-button svg { width: 16px; height: 16px; flex: none; }
+.dm-tabs { display: flex; flex-direction: column; gap: 3px; margin: 0 0 14px; }
+.dm-tab {
+  display: flex; width: 100%; min-width: 0; align-items: center; gap: 9px; padding: 8px 9px; border-radius: 6px;
+  color: var(--muted); font-size: 12px; font-weight: 700; text-align: left;
+}
+.dm-tab:hover { background: var(--raise); color: var(--fg); }
+.dm-tab.on { background: #45414f; color: #fff; box-shadow: inset 3px 0 var(--nova); }
+.dm-tab-icon { width: 18px; flex: none; font-size: 16px; text-align: center; }
+.dm-tab-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-tab-badge { min-width: 17px; margin-left: auto; padding: 2px 5px; border-radius: 9px; background: #ed4245; color: #fff; font-size: 10px; text-align: center; }
+.dm-page { width: min(100%, 1120px); margin: 0 auto; padding: 26px 32px 36px; }
+.dm-page h2 { margin: 0; font-family: var(--font-display); font-size: 24px; }
+.dm-page-intro { margin: 7px 0 22px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.dm-subtabs { display: flex; gap: 5px; margin: 0 0 10px; }
+.dm-subtab { padding: 6px 9px; border-radius: 5px; color: var(--muted); font-size: 12px; }
+.dm-subtab:hover, .dm-subtab.on { background: var(--raise); color: var(--fg); }
+.dm-page .dm-empty { padding: 18px 8px; text-align: center; line-height: 1.5; }
+.dm-item-card, .quest-card, .shop-card {
+  margin: 8px 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #25262b;
+}
+.dm-page .dm-item-card { min-height: 76px; padding: 14px; }
+.dm-page .dm-item-card .av { width: 44px; height: 44px; font-size: 16px; }
+.friends-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.friends-grid .dm-item-card { margin: 0; }
+.dm-page .dm-subtabs { gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
+.dm-page .dm-subtab { padding: 9px 12px; }
+.dm-page .dm-subtab.on { box-shadow: inset 0 -2px var(--nova); background: transparent; }
+.dm-page .dm-empty { padding: 30px 12px; border: 1px dashed var(--line); border-radius: 8px; }
+.dm-item-card { display: flex; align-items: center; gap: 10px; }
+.dm-item-card .dm-copy { flex: 1; }
+.dm-item-action, .dm-secondary-action {
+  flex: none; padding: 6px 9px; border-radius: 5px; background: #5865f2; color: #fff; font-size: 11px; font-weight: 700;
+}
+.dm-item-action:hover, .dm-secondary-action:hover { background: #4752c4; }
+.dm-secondary-action { background: var(--raise); color: var(--fg); }
+.dm-secondary-action:hover { background: #4a4d55; }
+.dm-page-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0 12px; }
+.dm-page-toolbar strong { font-size: 12px; }
+.dm-demo-action { width: 100%; margin: 0 0 10px; padding: 9px 10px; border: 1px dashed #7360a8; border-radius: 7px; color: #d3c7ff; font-size: 12px; font-weight: 700; }
+.dm-demo-action:hover { background: #403650; }
+.dm-invite-card { display: block; }
+.dm-invite-card .dm-invite-head { display: flex; align-items: center; gap: 10px; }
+.dm-invite-card .dm-invite-copy { min-width: 0; flex: 1; }
+.dm-invite-copy strong, .dm-invite-copy span { display: block; }
+.dm-invite-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-invite-copy span, .dm-invite-meta { margin-top: 3px; color: var(--muted); font-size: 11px; }
+.dm-invite-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 11px; }
+.dm-quest-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.dm-quest-top h3, .shop-card h3 { margin: 0; font-size: 13px; }
+.dm-quest-reward { flex: none; color: var(--gold); font-size: 11px; font-weight: 700; }
+.dm-quest-copy, .shop-card p { margin: 7px 0 10px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.dm-progress { height: 5px; margin: 10px 0; overflow: hidden; border-radius: 4px; background: var(--rail); }
+.dm-progress i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--nova), #ec69bb); }
+.dm-quest-foot { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 11px; }
+.dm-quest-foot button { padding: 5px 8px; border-radius: 5px; background: #5865f2; color: white; font-size: 11px; font-weight: 700; }
+.dm-quest-foot button:disabled { background: var(--raise); color: var(--muted); cursor: default; }
+.dm-shop-balance { color: var(--gold); font-size: 12px; font-weight: 700; }
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+.shop-card { margin: 0; }
+.quest-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.quest-grid .quest-card { margin: 0; padding: 16px; }
+.nitro-hero { margin: 8px 0 20px; padding: 32px; border-radius: 14px; background: radial-gradient(circle at 85% 10%, #b79bff66, transparent 38%), linear-gradient(120deg,#302342,#23202e 60%,#312849); }
+.nitro-mark { color: #d3baff; font-size: 34px; }
+.nitro-hero h3 { margin: 8px 0; font: 700 22px var(--font-display); }
+.nitro-hero p { max-width: 560px; margin: 0 0 18px; color: #d2c9dc; line-height: 1.5; }
+.nitro-perks { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 20px; }
+.nitro-perks span { padding: 8px 10px; border: 1px solid #55496a; border-radius: 7px; color: #e2d9ed; font-size: 12px; }
+.nitro-cta { padding: 10px 16px; border-radius: 6px; background: #8a5cff; color: white; font-weight: 700; }
+.dm-section-view .top-actions .dm-only,
+.dm-section-view .top-actions .search-box { display: none !important; }
+.dm-section-view .composer { display: none; }
+.dm-section-view .feed { padding: 0; overflow-y: auto; }
+.dm-section-banner { padding: 22px 32px 16px; border-bottom: 1px solid var(--rail); }
+.dm-section-banner h1 { margin: 0; font: 700 20px var(--font-display); }
+.dm-finder {
+  position: fixed; inset: 0; z-index: 70; display: grid; place-items: start center; overflow-y: auto;
+  padding: max(14vh, 60px) 16px 30px; background: rgba(0,0,0,.72); backdrop-filter: blur(2px);
+}
+.dm-finder[hidden] { display: none; }
+.dm-finder-dialog {
+  width: min(640px, 100%); max-height: min(620px, calc(100vh - 90px)); display: flex; flex-direction: column;
+  overflow: hidden; border: 1px solid #24252b; border-radius: 10px; background: #111216;
+  box-shadow: 0 24px 80px #000b;
+}
+.dm-finder-title { margin: 0; padding: 0 20px 14px; color: #e4e6eb; font-size: 13px; font-weight: 700; }
+.dm-finder-search-wrap { position: relative; flex: none; padding: 0 16px 16px; }
+.dm-finder-search-wrap svg { position: absolute; top: 16px; left: 30px; width: 18px; height: 18px; color: #999eac; pointer-events: none; }
+.dm-finder-search {
+  width: 100%; height: 52px; padding: 0 14px 0 42px; border: 2px solid #1684ff; border-radius: 7px;
+  outline: 0; background: #111216; color: var(--fg); font: 15px var(--font-body);
+}
+.dm-finder-search::placeholder { color: #9298a9; }
+.dm-finder-results { min-height: 100px; padding: 0 10px 12px; overflow-y: auto; }
+.dm-finder-section { margin: 0; padding: 4px 10px 7px; color: #a7adbb; font-size: 11px; font-weight: 700; }
+.dm-finder-result {
+  display: flex; width: 100%; min-height: 50px; align-items: center; gap: 11px; padding: 7px 10px;
+  border-radius: 6px; color: #c4c9d4; text-align: left;
+}
+.dm-finder-result:hover, .dm-finder-result:focus-visible { background: #265fa9; color: #fff; outline: 0; }
+.dm-finder-result .av { width: 34px; height: 34px; }
+.dm-finder-result-copy { min-width: 0; flex: 1; }
+.dm-finder-result-copy strong, .dm-finder-result-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-finder-result-copy strong { font-size: 13px; }
+.dm-finder-result-copy span { margin-top: 3px; color: #a9afbd; font-size: 11px; }
+.dm-finder-result:hover .dm-finder-result-copy span { color: #d3ddf2; }
+.dm-finder-result-hint { color: #b7c8e8; font-size: 11px; }
+.dm-finder-result-icon { display: grid; width: 34px; height: 34px; flex: none; place-items: center; border-radius: 50%; background: #202127; color: #aeb8cc; font-size: 16px; }
+.dm-finder-empty { padding: 22px 10px; color: var(--muted); font-size: 13px; text-align: center; }
+.dm-finder-foot { padding: 10px 18px 14px; border-top: 1px solid #24252b; color: #9298a9; font-size: 11px; }
+.dm-finder-foot kbd { padding: 2px 5px; border-radius: 4px; background: #25262b; color: #d8dbe2; font: inherit; }
+.shop-art { display: grid; height: 74px; margin: -12px -12px 10px; place-items: center; border-radius: 7px 7px 0 0; background: radial-gradient(circle at 50% 110%, #f0539f66, transparent 55%), linear-gradient(135deg,#34284f,#202127); color: #ffd76a; font-size: 28px; }
+.dm-search {
+  display: flex; height: 34px; align-items: center; gap: 8px; margin: 3px 4px 18px; padding: 0 10px;
+  border-radius: 5px; background: var(--rail); color: var(--muted);
+}
+.dm-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--fg); font: 12px var(--font-body); }
+.dm-search input::placeholder { color: var(--muted); }
+.dm-row {
+  display: flex; width: 100%; align-items: center; gap: 10px; padding: 8px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--muted); text-align: left;
+}
+.dm-row:hover, .dm-row.on { background: var(--raise); color: var(--fg); }
+.dm-row[hidden] { display: none; }
+.dm-row .av { width: 36px; height: 36px; font-size: 13px; }
+.dm-copy { min-width: 0; flex: 1; }
+.dm-copy strong, .dm-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-copy strong { font-size: 13px; font-weight: 600; }
+.dm-copy span { margin-top: 3px; color: var(--muted); font-size: 11px; }
+.cat { margin: 14px 8px 6px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.cat:first-child { margin-top: 0; }
+.ch {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 10px; border-radius: 6px;
+  color: var(--muted); text-align: left;
+}
+.ch:hover { background: var(--raise); color: var(--fg); }
+.ch.on { background: var(--raise); color: var(--fg); }
+.ch b { color: var(--muted); font-weight: 500; width: 14px; text-align: center; }
+.me {
+  position: relative; display: flex; align-items: center; gap: 6px; padding: 8px; background: var(--rail); flex: none;
+  padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+}
+.profile-button { display: flex; min-width: 0; flex: 1; align-items: center; gap: 9px; padding: 2px; border-radius: 6px; text-align: left; }
+.profile-button:hover { background: var(--raise); }
+.me .meta { min-width: 0; flex: 1; line-height: 1.25; }
+.me .meta strong { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.me .meta span { font-size: 12px; color: var(--muted); }
+.profile-settings { display: grid; width: 32px; height: 32px; flex: none; place-items: center; border-radius: 6px; color: var(--muted); }
+.profile-settings:hover { background: var(--raise); color: var(--fg); }
+.settings-screen {
+  position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 24px;
+  background: rgba(0,0,0,.68); color: var(--fg);
+}
+.settings-screen[hidden] { display: none; }
+.settings-window {
+  position: relative; display: grid; width: min(1040px, 100%); height: min(760px, 100%);
+  grid-template-columns: 260px minmax(0, 1fr); overflow: hidden; border: 1px solid #45474e;
+  border-radius: 12px; background: #313338; box-shadow: 0 24px 80px #000b;
+}
+.settings-nav {
+  display: flex; min-height: 0; flex-direction: column; padding: 24px 12px 18px 18px;
+  overflow: hidden; background: #2b2d31; border-right: 1px solid #202127;
+}
+.settings-nav-title { margin: 0 8px 14px; color: #b5bac1; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.settings-search-wrap { position: relative; flex: none; margin: 0 4px 14px; }
+.settings-search-wrap svg { position: absolute; top: 9px; left: 10px; width: 16px; height: 16px; color: #949ba4; pointer-events: none; }
+.settings-search {
+  width: 100%; height: 36px; padding: 0 10px 0 34px; border: 1px solid #202127; border-radius: 5px;
+  outline: 0; background: #1e1f22; color: var(--fg); font: 13px var(--font-body);
+}
+.settings-search:focus { border-color: var(--nova); }
+.settings-nav-list { min-height: 0; overflow-y: auto; }
+.settings-nav-group { margin: 0 0 12px; }
+.settings-nav-group-title { margin: 18px 8px 6px; color: #949ba4; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.settings-nav-group:first-child .settings-nav-group-title { margin-top: 0; }
+.settings-nav-item {
+  display: flex; width: 100%; min-height: 36px; align-items: center; gap: 10px; padding: 7px 9px;
+  border-radius: 5px; color: #b5bac1; font-size: 13px; text-align: left;
+}
+.settings-nav-item:hover { background: #35373c; color: var(--fg); }
+.settings-nav-item[aria-current="page"]:not(.settings-submenu-item) {
+  background: #1684ff; color: #fff; font-weight: 700; box-shadow: none;
+}
+.settings-nav-item.settings-submenu-item[aria-current="page"] {
+  position: relative; background: transparent; color: #fff; font-weight: 500; box-shadow: none;
+}
+.settings-nav-item.settings-submenu-item[aria-current="page"]::before {
+  position: absolute; top: 3px; bottom: 3px; left: -9px; width: 2px; border-radius: 2px;
+  background: #fff; content: "";
+}
+.settings-submenu { margin: 2px 0 6px 12px; padding-left: 8px; border-left: 1px solid #4a4c52; }
+.settings-submenu[hidden] { display: none; }
+.settings-nav-item.settings-submenu-item { min-height: 32px; padding: 6px 8px; font-size: 12px; }
+.settings-category-icon { display: grid; width: 17px; height: 17px; flex: none; place-items: center; }
+.settings-category-icon svg { width: 17px; height: 17px; }
+.settings-category-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.settings-nav-item.settings-logout { color: #f23f43; }
+.settings-nav-item.settings-logout:hover { background: #432b2e; color: #ff777a; }
+.settings-nav-empty { padding: 12px 9px; color: var(--muted); font-size: 12px; }
+.settings-content { position: relative; min-width: 0; overflow-y: auto; padding: 42px 76px 50px 48px; }
+.settings-content-inner { width: min(740px, 100%); margin: 0 auto; }
+.settings-content h1 { margin: 0 0 10px; font: 700 24px var(--font-display); }
+.settings-description { margin: 0 0 26px; color: var(--muted); font-size: 14px; line-height: 1.55; }
+.settings-panel { margin: 12px 0; padding: 18px; border-radius: 8px; background: #2b2d31; }
+.settings-panel h2 { margin: 0 0 12px; font-size: 15px; }
+.settings-panel .settings-description { margin: 0; }
+.settings-account-row { display: flex; align-items: center; gap: 12px; }
+.settings-account-avatar { display: grid; width: 52px; height: 52px; flex: none; place-items: center; border-radius: 50%; background: linear-gradient(160deg,#ffd76a,#ff9a3c); color: #1a0d08; font-size: 20px; font-weight: 700; }
+.settings-account-copy { min-width: 0; }
+.settings-account-copy strong, .settings-account-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.settings-account-copy span { margin-top: 4px; color: var(--muted); font-size: 12px; }
+.settings-detail-section { margin: 0; padding: 18px 0; border-bottom: 1px solid #45474e; }
+.settings-detail-section:first-child { padding-top: 0; }
+.settings-detail-section:last-child { border-bottom: 0; }
+.settings-detail-section h2 { margin: 0 0 14px; font: 700 20px var(--font-display); }
+.settings-detail-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; min-height: 54px; align-items: center;
+  gap: 16px; padding: 8px 0;
+}
+.settings-detail-copy { min-width: 0; }
+.settings-detail-label { display: block; margin-bottom: 4px; color: #d7d9de; font-size: 13px; font-weight: 700; }
+.settings-detail-value { display: inline-block; max-width: 100%; overflow-wrap: anywhere; color: #b5bac1; font-size: 13px; }
+.settings-detail-actions { display: flex; align-items: center; gap: 6px; }
+.settings-detail-action {
+  min-width: 76px; padding: 8px 13px; border: 1px solid #1684ff; border-radius: 5px;
+  color: #fff; font-size: 12px; text-align: center;
+}
+.settings-detail-action:hover { background: #1684ff; }
+.settings-detail-action.secondary { min-width: auto; padding: 4px 2px; border: 0; color: #1684ff; }
+.settings-detail-action.secondary:hover { background: transparent; text-decoration: underline; }
+.settings-detail-chevron { color: #b5bac1; font-size: 21px; line-height: 1; }
+.settings-status-card { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; background: #232429; }
+.settings-status-icon { display: grid; width: 42px; height: 42px; flex: none; place-items: center; border-radius: 8px; background: #383a40; color: #d7d9de; font-size: 19px; }
+.settings-status-copy strong, .settings-status-copy span { display: block; }
+.settings-status-copy span { margin-top: 4px; color: #b5bac1; font-size: 12px; line-height: 1.4; }
+.settings-close {
+  position: absolute; top: 14px; right: 16px; display: flex; width: 36px; height: 36px; align-items: center; justify-content: center;
+  border: 2px solid var(--ember); border-radius: 50%; color: var(--ember); font-size: 24px; font-weight: 700;
+}
+.settings-close:hover { background: var(--ember); color: #1a0d08; }
+.settings-close-hint { position: absolute; top: 54px; right: 16px; color: #949ba4; font-size: 10px; text-align: center; }
+.settings-screen button:focus-visible, .settings-screen input:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.profile-card {
+  position: absolute; z-index: 25; left: 8px; bottom: calc(100% + 10px); width: min(300px, calc(100vw - 96px));
+  max-height: calc(100vh - 24px); overflow-y: auto; border: 1px solid #554363; border-radius: 12px; background: #211a2b;
+  box-shadow: 0 16px 42px #0009; color: #f2edf7;
+}
+.profile-card[hidden] { display: none; }
+.profile-cover {
+  position: relative; height: 88px; overflow: hidden;
+  background: radial-gradient(circle at 75% 15%, #8a5cff88, transparent 34%), radial-gradient(circle at 20% 85%, #f0539f66, transparent 42%), linear-gradient(135deg,#242039,#171521);
+}
+.profile-cover::before, .profile-cover::after { position: absolute; color: #ffe4a8; content: "✦"; opacity: .8; }
+.profile-cover::before { top: 16px; right: 48px; font-size: 19px; }
+.profile-cover::after { top: 48px; right: 84px; font-size: 12px; }
+.profile-hero { position: relative; padding: 0 14px 14px; }
+.profile-large-avatar {
+  position: relative; display: grid; width: 64px; height: 64px; margin-top: -28px; place-items: center;
+  border: 5px solid #211a2b; border-radius: 50%; background: linear-gradient(145deg,#ffd76a,#ff8a3a 52%,#f0539f);
+  color: #28182c; font-family: var(--font-display); font-size: 24px; font-weight: 700;
+}
+.profile-large-avatar::after {
+  position: absolute; right: -2px; bottom: -1px; width: 15px; height: 15px; border: 3px solid #211a2b;
+  border-radius: 50%; background: var(--online); content: "";
+}
+.profile-large-avatar.away::after { background: var(--amber); }
+.profile-large-avatar.busy::after { background: #ed4245; }
+.profile-large-avatar.invisible::after { background: #777b83; }
+.profile-name { margin-top: 7px; font-family: var(--font-display); font-size: 18px; font-weight: 700; }
+.profile-handle { margin-top: 2px; color: #b7adbf; font-size: 12px; }
+.profile-identity { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 2px; }
+.profile-identity .profile-handle { margin-top: 0; }
+.profile-identity select, .profile-tag-select {
+  max-width: 100%; padding: 3px 20px 3px 7px; border: 1px solid #494050; border-radius: 5px;
+  background: #17131e; color: #c9c0d0; font: 10px var(--font-body);
+}
+.profile-identity select:focus, .profile-tag-select:focus { outline: 1px solid #8a5cff; }
+.profile-custom-status {
+  position: absolute; top: 26px; left: 58px; min-width: 25px; max-width: 150px; height: 24px;
+  padding: 0 7px; border: 1px solid #554363; border-radius: 12px; background: #17131e;
+  color: #eee6f5; font-size: 11px; text-align: left;
+}
+.profile-custom-status.empty { width: 25px; padding: 0; text-align: center; }
+.profile-tag-row { display: flex; align-items: center; gap: 7px; margin-top: 9px; color: #a99db2; font-size: 11px; }
+.profile-tag-pill { padding: 3px 7px; border-radius: 4px; background: #383044; color: #e5d9f0; font-size: 10px; font-weight: 700; }
+.profile-status-options { display: grid; gap: 2px; margin: 0 8px 7px 34px; padding: 4px; border: 1px solid #393140; border-radius: 7px; background: #211a2b; }
+.profile-status-options[hidden] { display: none; }
+.profile-status-options button { display: flex; align-items: center; gap: 8px; padding: 7px; border-radius: 5px; color: #d3cadc; font-size: 11px; text-align: left; }
+.profile-status-options button:hover, .profile-status-options button[aria-checked="true"] { background: #383044; color: #fff; }
+.profile-status-options .profile-status-dot.invisible { background: #777b83; }
+.profile-status-options .profile-status-dot.away { background: var(--amber); }
+.profile-status-options .profile-status-dot.busy { background: #ed4245; }
+.profile-note { margin-top: 10px; padding: 9px 10px; border-radius: 7px; background: #17131e; color: #c9c0d0; font-size: 12px; }
+.profile-activity { display: flex; align-items: center; gap: 10px; margin: 0 10px 10px; padding: 10px; border-radius: 8px; background: #17131e; }
+.profile-activity-icon { display: grid; width: 38px; height: 38px; flex: none; place-items: center; border-radius: 8px; background: linear-gradient(145deg,#ff9a3c,#8a5cff); font-size: 18px; }
+.profile-activity strong, .profile-activity span { display: block; }
+.profile-activity strong { font-size: 12px; }
+.profile-activity span { margin-top: 3px; color: #b7adbf; font-size: 11px; }
+.profile-menu { margin: 0 10px 10px; padding: 4px; border-radius: 8px; background: #17131e; }
+.profile-menu button {
+  display: flex; width: 100%; min-height: 42px; align-items: center; gap: 10px; padding: 0 9px;
+  border-radius: 6px; color: #d3cadc; text-align: left; font-size: 12px;
+}
+.profile-menu button + button { border-top: 1px solid #30283a; border-radius: 0; }
+.profile-menu button:hover { background: #30283a; color: #fff; }
+.profile-menu .profile-status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--online); }
+.profile-menu .profile-status-dot.away { background: var(--amber); }
+.profile-menu .profile-status-dot.busy { background: #ed4245; }
+.profile-menu .profile-menu-icon { width: 15px; color: #ae9cbd; text-align: center; font-size: 15px; }
+.profile-menu .profile-new { margin-left: auto; padding: 3px 7px; border-radius: 10px; background: #5865f2; color: #fff; font-size: 9px; font-weight: 700; }
+.av {
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  font-weight: 700; font-size: 14px; color: #1a0d08; position: relative;
+}
+.av.sm { width: 32px; height: 32px; font-size: 13px; }
+.av.dot::after {
+  content: ""; position: absolute; right: -2px; bottom: -2px; width: 11px; height: 11px; border-radius: 50%;
+  background: var(--online); border: 2.5px solid var(--side);
+}
+.av.dot.away::after { background: var(--amber); }
+.av.dot.busy::after { background: #ed4245; }
+.av.dot.invisible::after { background: #777b83; }
+
+/* chat */
+.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.top {
+  height: 52px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 16px;
+  border-bottom: 1px solid var(--rail); font-family: var(--font-display); font-weight: 600;
+  padding-top: env(safe-area-inset-top, 0px); height: calc(52px + env(safe-area-inset-top, 0px));
+}
+.top .hash { color: var(--muted); font-weight: 500; }
+.top .topic { color: var(--muted); font-family: var(--font-body); font-weight: 400; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.top-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.top-actions .dm-only { display: none; }
+.app.dm-view .top-actions .dm-only { display: grid; }
+#search-open { display: none !important; }
+.top-actions .top-action { flex: none; width: 30px; height: 30px; font-size: 16px; }
+.dm-profile {
+  display: flex; flex-direction: column; min-width: 0; padding: 24px 18px; overflow-y: auto;
+  border-left: 1px solid var(--rail); background: var(--side); text-align: center;
+}
+.dm-profile[hidden] { display: none; }
+.dm-profile .dm-profile-avatar { width: 96px; height: 96px; margin: 6px auto 14px; border: 6px solid #202127; font-size: 36px; }
+.dm-profile h2 { margin: 0; font-family: var(--font-display); font-size: 20px; }
+.dm-profile .dm-profile-handle { margin-top: 4px; color: var(--muted); font-size: 13px; }
+.dm-profile .dm-profile-custom { margin: 12px auto 0; padding: 7px 10px; border-radius: 8px; background: #202127; color: #d9dce2; font-size: 12px; }
+.dm-profile .profile-tag-pill { display: inline-block; margin: 10px auto 0; }
+.dm-profile-section { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); text-align: left; }
+.dm-profile-section h3 { margin: 0 0 8px; color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.dm-profile-section p { margin: 0; color: var(--fg); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.app.dm-view .members:not(.dm-profile) { display: none; }
+.search-box { position: relative; width: 150px; height: 30px; flex: none; }
+.search-box input {
+  width: 100%; height: 100%; min-width: 0; padding: 0 30px 0 9px; border: 1px solid transparent; border-radius: 5px;
+  outline: 0; background: var(--rail); color: var(--fg); font: 12px var(--font-body);
+}
+.search-box:focus-within { width: 190px; }
+.search-box input:focus { border-color: var(--nova); }
+.search-box input::placeholder { color: var(--muted); }
+.search-box-icon {
+  position: absolute; top: 7px; right: 8px; width: 16px; height: 16px; color: var(--muted); pointer-events: none;
+}
+.menu { display: none; padding: 6px; margin-left: -6px; border-radius: 6px; }
+.menu:hover { background: var(--raise); }
+.feed { flex: 1; overflow-y: auto; padding: 16px 0 8px; min-height: 0; }
+.msg { display: flex; gap: 14px; padding: 4px 16px; }
+.msg:hover { background: rgba(255,255,255,.025); }
+.msg.first { margin-top: 14px; }
+.msg .gutter { width: 40px; flex: none; }
+.msg .gutter .av { width: 40px; height: 40px; }
+.msg .body { min-width: 0; }
+.msg .who { display: flex; align-items: baseline; gap: 8px; }
+.msg .who strong { font-weight: 700; }
+.msg .who time { font-size: 12px; color: var(--muted); }
+.msg p { margin: 2px 0 0; line-height: 1.45; overflow-wrap: anywhere; white-space: pre-wrap; }
+.day { display: flex; align-items: center; gap: 12px; margin: 18px 16px 6px; font-size: 12px; color: var(--muted); font-weight: 700; }
+.day::before, .day::after { content: ""; height: 1px; background: var(--line); flex: 1; }
+.dm-welcome {
+  margin: 30px 16px 20px; padding: 0 0 22px; border-bottom: 1px solid var(--line);
+}
+.dm-welcome .dm-welcome-icon {
+  display: grid; width: 48px; height: 48px; place-items: center; border-radius: 50%;
+  background: #5865f2; color: #fff; font-size: 24px;
+}
+.dm-welcome h2 { margin: 14px 0 4px; font-family: var(--font-display); font-size: 20px; }
+.dm-welcome p { margin: 0; color: var(--muted); font-size: 13px; }
+.composer { padding: 0 16px max(16px, env(safe-area-inset-bottom, 0px)); flex: none; }
+.composer form { display: flex; align-items: flex-end; gap: 8px; background: var(--raise); border-radius: 10px; padding: 6px 8px 6px 14px; }
+.composer textarea {
+  flex: 1; min-width: 0; resize: none; background: none; border: 0; color: var(--fg); font: inherit;
+  padding: 8px 0; max-height: 120px; line-height: 1.4; outline-offset: 0;
+}
+.composer textarea::placeholder { color: var(--muted); }
+.send { padding: 8px 14px; border-radius: 8px; background: linear-gradient(160deg, var(--ember), var(--amber)); color: #1a0d08; font-weight: 700; font-size: 14px; }
+.send:disabled { opacity: .35; cursor: default; }
+
+/* members */
+.members { background: var(--side); padding: 16px 8px; overflow-y: auto; border-left: 1px solid var(--rail); }
+.members .cat:first-child { margin-bottom: 12px; }
+.members .cat { margin-top: 0; }
+.mem { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 6px; color: var(--muted); }
+.mem:hover { background: var(--raise); color: var(--fg); }
+.mem span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mem + .cat { margin-top: 20px; }
+.scrim { display: none; }
+.notice {
+  position: fixed; right: 18px; bottom: 18px; z-index: 20; max-width: min(360px, calc(100vw - 36px));
+  padding: 11px 15px; border: 1px solid var(--line); border-radius: 8px; background: var(--rail);
+  color: var(--fg); box-shadow: 0 8px 24px #0005;
+}
+.notice[hidden] { display: none; }
+.auth-gate {
+  position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; overflow-y: auto;
+  padding: 24px; background: #111318eF; backdrop-filter: blur(7px);
+}
+.auth-gate[hidden] { display: none; }
+.auth-card {
+  width: min(420px, 100%); padding: 28px; border: 1px solid #494b55; border-radius: 14px;
+  background: #2b2d31; box-shadow: 0 20px 60px #0008;
+}
+.auth-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+.auth-brand svg { width: 31px; height: 44px; flex: none; }
+.auth-brand strong { font-family: var(--font-display); font-size: 20px; }
+.auth-card h1 { margin: 0 0 7px; font-family: var(--font-display); font-size: 23px; }
+.auth-copy { margin: 0 0 22px; color: var(--muted); line-height: 1.5; }
+.auth-fields { display: grid; gap: 13px; }
+.auth-fields label { display: grid; gap: 6px; color: #d7d9de; font-size: 12px; font-weight: 700; }
+.auth-fields input {
+  width: 100%; height: 42px; padding: 0 11px; border: 1px solid #1e1f22; border-radius: 6px;
+  outline: 0; background: #1e1f22; color: var(--fg); font: 14px var(--font-body);
+}
+.auth-fields input:focus { border-color: #5865f2; }
+.auth-submit { width: 100%; margin-top: 18px; padding: 11px; border-radius: 6px; background: #5865f2; color: #fff; font-weight: 700; }
+.auth-submit:hover { background: #4752c4; }
+.auth-submit:disabled { opacity: .6; cursor: wait; }
+.auth-switch { margin-top: 15px; color: #b7bac2; font-size: 13px; }
+.auth-switch button { padding: 0; color: #aeb8ff; }
+.auth-error { margin: 15px 0 0; color: #ff8c8c; font-size: 13px; line-height: 1.45; }
+.auth-error[hidden] { display: none; }
+.auth-user { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 6px; background: var(--raise); }
+.auth-user[hidden] { display: none; }
+.auth-user span { min-width: 0; flex: 1; overflow: hidden; color: var(--fg); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.auth-user button { color: #c5cbff; font-size: 12px; }
+.dm-empty { padding: 14px; color: var(--muted); font-size: 12px; }
+
+@media (max-width: 900px) {
+  .app { grid-template-columns: 72px 240px minmax(0, 1fr); }
+  .app.dm-view { grid-template-columns: 72px 240px minmax(0, 1fr) 60px; }
+  .app.dm-view.dm-section-view { grid-template-columns: 72px 240px minmax(0, 1fr); }
+  .members, .dm-profile { display: none; }
+  .app.dm-view.profile-open .dm-profile { display: flex; position: absolute; z-index: 9; top: 0; right: 0; bottom: 0; width: min(300px, 82vw); box-shadow: -14px 0 35px #0007; }
+}
+@media (max-width: 700px) {
+  .app { grid-template-columns: 54px minmax(0, 1fr); position: relative; }
+  .app.dm-view { grid-template-columns: 54px minmax(0, 1fr); }
+  .app.dm-view.dm-section-view { grid-template-columns: 54px minmax(0, 1fr); }
+  .friends-rail { display: none; }
+  .rail { position: relative; top: auto; bottom: auto; left: auto; z-index: 6; width: auto; padding-top: calc(12px + env(safe-area-inset-top, 0px)); transform: none; }
+  .side { position: absolute; top: 0; bottom: 0; left: 54px; z-index: 5; width: min(260px, calc(100% - 54px)); padding-top: env(safe-area-inset-top, 0px); transform: translateX(-110%); transition: transform .2s; }
+  .app.open .side { transform: none; }
+  .scrim { display: block; position: absolute; inset: 0; background: rgba(0,0,0,.5); z-index: 4; }
+  .app:not(.open):not(.members-open) .scrim { display: none; }
+  .menu { display: block; }
+  .app.members-open .members {
+    display: block; position: absolute; z-index: 7; top: 0; right: 0; bottom: 0;
+    width: min(250px, 82vw); box-shadow: -14px 0 35px #0007;
+  }
+  .app.dm-view.profile-open .dm-profile { width: min(300px, 82vw); }
+  .app.dm-view .top-actions #dm-profile-toggle,
+  .app.dm-view .dm-profile { display: none !important; }
+  .dm-page { padding: 20px 16px 30px; }
+  .settings-screen { padding: 12px; }
+  .settings-window { width: 100%; height: 100%; grid-template-columns: minmax(132px, 40vw) minmax(0, 1fr); border-radius: 9px; }
+  .settings-nav { padding: 18px 8px 12px max(8px, env(safe-area-inset-left, 0px)); }
+  .settings-nav-title { margin: 0 6px 12px; font-size: 10px; }
+  .settings-nav-item { min-height: 38px; gap: 5px; padding: 7px 6px; font-size: 11px; }
+  .settings-nav-group-title { margin-right: 6px; margin-left: 6px; font-size: 9px; }
+  .settings-search-wrap { margin-right: 2px; margin-left: 2px; }
+  .settings-search { height: 34px; padding-left: 29px; font-size: 11px; }
+  .settings-search-wrap svg { left: 7px; }
+  .settings-content { padding: 58px 18px 28px; }
+  .settings-content h1 { font-size: 20px; }
+  .settings-panel { padding: 13px; }
+  .settings-close { top: 10px; right: 10px; width: 32px; height: 32px; font-size: 22px; }
+  .settings-close-hint { display: none; }
+  .dm-section-banner { padding: 18px 16px 13px; }
+  .nitro-hero { padding: 22px 18px; }
+  .dm-finder { padding-top: max(9vh, 38px); }
+  .dm-finder-dialog { max-height: calc(100vh - 54px); }
+  .search-box { display: none; }
+  .top { gap: 4px; padding-left: 8px; padding-right: 8px; }
+  .top .topic, .top .hash { display: none; }
+  #ch-name { max-width: 62px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .top-actions { gap: 0; }
+  .top-actions .top-action { width: 24px; height: 28px; }
+  #search-open { display: grid !important; }
+  .search-box.search-active {
+    display: block; position: absolute; z-index: 8; top: calc(52px + env(safe-area-inset-top, 0px));
+    left: 64px; right: 10px; width: auto; height: 38px; box-shadow: 0 6px 20px #0008;
+  }
+  .search-box.search-active input { height: 38px; }
+  .search-box.search-active .search-box-icon { top: 11px; }
+  .app.members-open .scrim, .app.profile-open .scrim { display: block; }
+  .msg { gap: 10px; padding-inline: max(12px, env(safe-area-inset-left, 0px)) max(12px, env(safe-area-inset-right, 0px)); }
+  .top, .composer { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) { .srv, .rail, .side { transition: none; } }
+
+/* loading screen, shown first, then fades into the app */
+#loader {
+  position: fixed; inset: 0; z-index: 50; display: grid; grid-template-rows: 1fr auto;
+  background: radial-gradient(90% 60% at 50% 28%, #3d2e6b 0%, #2a2156 65%, #241b4a 100%);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  transition: opacity .6s ease, visibility .6s;
+}
+#loader.done { opacity: 0; visibility: hidden; }
+.ld-center { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; min-width: 0; }
+.ld-logo-wrap { position: relative; width: 132px; height: 187px; }
+.ld-halo {
+  position: absolute; left: 50%; top: 52%; width: 300px; height: 300px; margin: -150px 0 0 -150px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(176,56,200,.72) 0%, rgba(152,52,162,.38) 38%, transparent 68%);
+  animation: ld-halo 2.6s ease-in-out infinite;
+}
+.ld-logo { position: relative; width: 100%; height: 100%; overflow: visible; animation: ld-float 2.6s ease-in-out infinite; }
+.ld-star { transform-box: fill-box; transform-origin: center; animation: ld-twinkle 2.6s ease-in-out infinite; }
+.ld-word { font-family: var(--font-display); font-weight: 700; font-size: clamp(26px, 7vw, 34px); margin: 0; }
+.ld-word span {
+  background: linear-gradient(90deg, #ffc83d, #ff7a59 55%, #f0539f);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.ld-status { display: flex; flex-direction: column; align-items: center; gap: 12px; color: #c9bfe0; font-size: 14px; letter-spacing: .04em; }
+.ld-bar { width: 132px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.14); overflow: hidden; }
+.ld-bar i {
+  display: block; width: 0; height: 100%; border-radius: 2px;
+  background: linear-gradient(90deg, #ffc83d, #ff7a59, #f0539f);
+  transition: width .9s ease;
+}
+.ld-tip {
+  width: 100%; max-width: 440px; justify-self: center; min-width: 0; text-align: center;
+  padding-bottom: max(32px, calc(env(safe-area-inset-bottom, 0px) + 24px));
+}
+.ld-tip h2 { margin: 0 0 8px; font-family: var(--font-display); font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: #ffb43d; }
+.ld-tip p { margin: 0; font-size: 15px; line-height: 1.5; min-height: 3em; transition: opacity .4s ease; text-wrap: balance; }
+.ld-tip p.out { opacity: 0; }
+@keyframes ld-float { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-8px) scale(1.03); } }
+@keyframes ld-twinkle { 0%, 100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.14) rotate(12deg); } }
+@keyframes ld-halo { 0%, 100% { opacity: .65; transform: scale(.94); } 50% { opacity: 1; transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) {
+  .ld-halo, .ld-logo, .ld-star { animation: none; }
+  .ld-bar i, #loader { transition: none; }
+}
+</style>
+
+<div id="loader" role="status" aria-live="polite">
+  <section class="ld-center">
+    <div class="ld-logo-wrap">
+      <div class="ld-halo"></div>
+      <svg class="ld-logo" viewBox="400 300 480 680" role="img" aria-label="NovaFlames logo">
+        <defs>
+          <linearGradient id="lfl" gradientUnits="userSpaceOnUse" x1="560" y1="330" x2="780" y2="960">
+            <stop offset="0" stop-color="#ffcf40"/>
+            <stop offset=".4" stop-color="#ff9a4a"/>
+            <stop offset=".8" stop-color="#f0539f"/>
+            <stop offset="1" stop-color="#b23fd0"/>
+          </linearGradient>
+        </defs>
+        <path d="M640 310 C600 390 580 470 597 610 C560 612 520 570 511 510 C470 565 410 625 410 725 C410 860 510 970 640 970 C770 970 870 860 870 725 C870 620 830 570 760 490 C700 420 660 370 640 310 Z" fill="url(#lfl)"/>
+        <path class="ld-star" d="M640 568 L676 705 L812 741 L676 777 L640 913 L605 777 L468 741 L605 705 Z" fill="#fff6e0"/>
+      </svg>
+    </div>
+    <h1 class="ld-word">Nova<span>Flames</span></h1>
+    <div class="ld-status"><span id="ld-label">Connecting</span><div class="ld-bar"><i id="ld-fill"></i></div></div>
+  </section>
+  <section class="ld-tip" aria-label="Tip">
+    <h2>Did you know</h2>
+    <p id="ld-tip">You can keep this window open in the background while NovaFlames finishes starting up.</p>
+  </section>
+</div>
+
+<div class="app" id="app">
+  <nav class="rail" id="rail" aria-label="Servers"></nav>
+  <aside class="side" id="side">
+    <header><span id="srv-name">Ember Lounge</span><div class="side-header-actions" id="side-header-actions"><button class="side-add" id="invite-server" type="button" aria-label="Invite to server" title="Invite to server" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 19v-1a6.5 6.5 0 0 1 13 0v1z"/><path d="M19 8v6m-3-3h6"/></svg></button><button class="side-add" id="add-channel" type="button" aria-label="Create channel" title="Create channel">+</button></div></header>
+    <div class="chans" id="chans"></div>
+    <div class="me">
+      <button class="profile-button" id="profile-button" type="button" aria-label="Open your profile" aria-expanded="false">
+        <div class="av dot" id="profile-small-avatar" style="background:linear-gradient(160deg,#ffd76a,#ff9a3c)">M</div>
+        <div class="meta"><strong id="profile-small-name">Mika</strong><span id="profile-small-status">Online</span></div>
+      </button>
+      <button class="profile-settings" id="profile-settings" type="button" aria-label="Profile settings" title="Profile settings">⚙</button>
+      <section class="profile-card" id="profile-card" aria-label="Your profile" hidden>
+        <div class="profile-cover"></div>
+        <div class="profile-hero">
+          <div class="profile-large-avatar" id="profile-large-avatar">M</div>
+          <button class="profile-custom-status empty" id="profile-custom-status" type="button" aria-label="Set a custom status" title="Set a custom status">+</button>
+          <div class="profile-name" id="profile-card-name">Mika Chen</div>
+          <div class="profile-identity">
+            <span class="profile-handle" id="profile-card-handle">mika · NovaFlames</span>
+            <select id="profile-pronouns" aria-label="Set your pronouns" title="Set pronouns">
+              <option value="">Set pronouns</option>
+              <option value="she/her">she/her</option>
+              <option value="he/him">he/him</option>
+              <option value="they/them">they/them</option>
+              <option value="any pronouns">any pronouns</option>
+            </select>
+          </div>
+          <div class="profile-tag-row">Server tag <select class="profile-tag-select" id="profile-server-tag" aria-label="Choose a server tag"></select></div>
+          <div class="profile-note">Keeping the sparks alive ✨</div>
+        </div>
+        <div class="profile-activity">
+          <div class="profile-activity-icon">✦</div>
+          <div><strong>Hanging out in NovaFlames</strong><span id="profile-activity-status">Community member · Online</span></div>
+        </div>
+        <div class="profile-menu">
+          <button type="button" data-profile-action="edit"><span class="profile-menu-icon">✎</span><span>Edit Profile</span><span class="profile-new">NEW</span></button>
+          <button type="button" data-profile-action="status" aria-expanded="false"><span class="profile-status-dot" id="profile-status-dot"></span><span id="profile-status-label">Online</span><span class="profile-menu-icon">⌄</span></button>
+          <div class="profile-status-options" id="profile-status-options" role="radiogroup" aria-label="Choose status" hidden>
+            <button type="button" data-status-value="Online" role="radio"><span class="profile-status-dot"></span>Online</button>
+            <button type="button" data-status-value="Do Not Disturb" role="radio"><span class="profile-status-dot busy"></span>Do Not Disturb</button>
+            <button type="button" data-status-value="Idle" role="radio"><span class="profile-status-dot away"></span>Idle</button>
+            <button type="button" data-status-value="Invisible" role="radio"><span class="profile-status-dot invisible"></span>Invisible</button>
+          </div>
+          <button type="button" data-profile-action="badges"><span class="profile-menu-icon">♙</span><span>Badges</span></button>
+          <button type="button" data-profile-action="activity"><span class="profile-menu-icon">▣</span><span>Activity</span><span class="profile-menu-icon">›</span></button>
+          <button type="button" data-profile-action="switch" disabled title="Accounts are disabled in test mode"><span class="profile-menu-icon">◉</span><span>Test mode · No account</span></button>
+          <button type="button" data-profile-action="copy"><span class="profile-menu-icon">▣</span><span>Copy User ID</span></button>
+        </div>
+      </section>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+  <main class="main">
+    <div class="top">
+      <button class="menu" id="menu" aria-label="Open channels">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <span class="hash" id="chat-symbol">#</span><span id="ch-name">general</span>
+      <span class="topic" id="ch-topic"></span>
+      <div class="top-actions">
+        <button class="top-action dm-only" id="voice-call" type="button" aria-label="Start voice call" title="Start voice call">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.96.35 1.9.69 2.8a2 2 0 0 1-.45 2.11L8.08 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.84.57 2.8.69A2 2 0 0 1 22 16.92z"/></svg>
+        </button>
+        <button class="top-action dm-only" id="video-call" type="button" aria-label="Start video call" title="Start video call">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg>
+        </button>
+        <button class="top-action dm-only" id="pinned-toggle" type="button" aria-label="Pinned messages" title="Pinned messages">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 3H8l1 6-3 3v2h6v7l1 1 1-1v-7h6v-2l-3-3 1-6z"/></svg>
+        </button>
+        <button class="top-action dm-only" id="add-dm" type="button" aria-label="Add to DM" title="Add to DM">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 19v-1a6.5 6.5 0 0 1 13 0v1z"/><path d="M19 8v6m-3-3h6"/><path d="M16.5 18a5.5 5.5 0 0 1 5 1"/></svg>
+        </button>
+        <button class="top-action dm-only" id="dm-profile-toggle" type="button" aria-label="Hide user profile" title="Hide user profile">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="9" r="3"/><path d="M7.5 18a4.5 4.5 0 0 1 9 0"/></svg>
+        </button>
+        <div class="search-box">
+          <input id="search" type="search" placeholder="Search messages" aria-label="Search messages">
+          <svg class="search-box-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+        </div>
+        <button class="top-action dm-only" id="search-open" type="button" aria-label="Search messages" title="Search messages">⌕</button>
+        <button class="top-action" id="members-toggle" type="button" aria-label="Toggle member list" title="Toggle member list">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="feed" id="feed" tabindex="0"></div>
+    <div class="composer">
+      <form id="form">
+        <textarea id="input" rows="1" maxlength="2000" placeholder="Message #general" aria-label="Message"></textarea>
+        <button class="send" id="send" type="submit" disabled>Send</button>
+      </form>
+    </div>
+  </main>
+  <aside class="members" id="members" aria-label="Members"></aside>
+  <aside class="members dm-profile" id="dm-profile" aria-label="Direct message user profile" hidden></aside>
+  <aside class="friends-rail" id="friends-rail" aria-label="Friends list" hidden></aside>
+</div>
+<section class="settings-screen" id="settings-screen" aria-label="User settings" hidden>
+  <div class="settings-window">
+  <aside class="settings-nav" aria-label="Settings navigation">
+    <h2 class="settings-nav-title">User Settings</h2>
+    <label class="settings-search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+      <input class="settings-search" id="settings-search" type="search" placeholder="Search settings" aria-label="Search settings">
+    </label>
+    <nav class="settings-nav-list" id="settings-nav-list">
+      <div class="settings-nav-group">
+        <button class="settings-nav-item" type="button" data-settings-toggle="account" data-settings-page="account" aria-expanded="false" aria-controls="settings-account-submenu"><span class="settings-category-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0z"/></svg></span><span class="settings-category-label">Account</span></button>
+        <div class="settings-submenu" id="settings-account-submenu" hidden>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="account-info">Account Info</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="password-security">Password &amp; Security</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="account-status">Account Status</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="family-center">Family Center</button>
+        </div>
+        <button class="settings-nav-item" type="button" data-settings-toggle="privacy" data-settings-page="privacy" aria-expanded="false" aria-controls="settings-privacy-submenu"><span class="settings-category-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 3.5 5.3v5.8c0 5.1 3.5 9.7 8.5 10.9 5-1.2 8.5-5.8 8.5-10.9V5.3L12 2zm0 4.1a2.1 2.1 0 0 1 2.1 2.1v1h.8v5.6H9.1V9.2h.8v-1A2.1 2.1 0 0 1 12 6.1zm0 1.4a.7.7 0 0 0-.7.7v1h1.4v-1a.7.7 0 0 0-.7-.7z"/></svg></span><span class="settings-category-label">Data &amp; Privacy</span></button>
+        <div class="settings-submenu" id="settings-privacy-submenu" hidden>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="privacy-data">How Discord Uses My Data</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="sponsored-content">Sponsored Content</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="profile-privacy">Profile Privacy</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="voice-e2ee">Voice End-to-end Encryption</button>
+        </div>
+        <button class="settings-nav-item" type="button" data-settings-toggle="permissions" data-settings-page="permissions" aria-expanded="false" aria-controls="settings-permissions-submenu"><span class="settings-category-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-8l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><circle cx="8" cy="11" r="1"/><circle cx="12" cy="11" r="1"/><circle cx="16" cy="11" r="1"/></svg></span><span class="settings-category-label">Messaging Permissions</span></button>
+        <div class="settings-submenu" id="settings-permissions-submenu" hidden>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="content-filters">Content Filters</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="spam-filters">Spam Filters</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="direct-messages">Direct Messages</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="friend-requests">Friend Requests</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="connected-games">Connected Games</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="ignore-block">Ignore &amp; Block</button>
+        </div>
+        <button class="settings-nav-item" type="button" data-settings-toggle="notifications" data-settings-page="notifications" aria-expanded="false" aria-controls="settings-notifications-submenu"><span class="settings-category-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a2.5 2.5 0 0 0 2.4-2h-4.8a2.5 2.5 0 0 0 2.4 2zm7-5-2-2.5V10a5 5 0 0 0-4-4.9V4a1 1 0 0 0-2 0v1.1A5 5 0 0 0 7 10v4.5L5 17v1h14z"/></svg></span><span class="settings-category-label">Notifications</span></button>
+        <div class="settings-submenu" id="settings-notifications-submenu" hidden>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="notification-overview">Overview</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="notification-sounds">Sounds</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="notification-badges">Badges</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="notification-email">Email</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="notification-advanced">Advanced</button>
+        </div>
+      </div>
+      <div class="settings-nav-group">
+        <h3 class="settings-nav-group-title">Billing</h3>
+        <button class="settings-nav-item" type="button" data-settings-page="nitro">Nitro</button>
+        <button class="settings-nav-item" type="button" data-settings-page="server-boost">Server Boost</button>
+        <button class="settings-nav-item" type="button" data-settings-page="subscription">Subscription</button>
+        <button class="settings-nav-item" type="button" data-settings-toggle="gift-inventory" data-settings-page="gift-inventory" aria-expanded="false" aria-controls="settings-gift-inventory-submenu"><span class="settings-category-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 7h-2.2a3 3 0 0 0-5.8-1 3 3 0 0 0-5.8 1H4a2 2 0 0 0-2 2v3h9V8h2v4h9V9a2 2 0 0 0-2-2zM9 5.5A1.5 1.5 0 0 1 10.5 7H9a1.5 1.5 0 0 1 0-3zm6 0A1.5 1.5 0 0 1 16.5 7H15a1.5 1.5 0 0 1 0-3zM2 14v5a2 2 0 0 0 2 2h7v-7zm11 0v7h7a2 2 0 0 0 2-2v-5z"/></svg></span><span class="settings-category-label">Gift Inventory</span></button>
+        <div class="settings-submenu" id="settings-gift-inventory-submenu" hidden>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="redeem-codes">Redeem Codes</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="gifting-badge">The Gifting Badge</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="gifts-purchased">Gifts I Purchased</button>
+        </div>
+        <button class="settings-nav-item" type="button" data-settings-toggle="billing" data-settings-page="billing" aria-expanded="false" aria-controls="settings-billing-submenu"><span class="settings-category-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2H3zm0 4h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zm3 6v2h5v-2z"/></svg></span><span class="settings-category-label">Billing</span></button>
+        <div class="settings-submenu" id="settings-billing-submenu" hidden>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="payment-methods">Payment Methods</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="transaction-history">Transaction History</button>
+        </div>
+      </div>
+      <div class="settings-nav-group">
+        <h3 class="settings-nav-group-title">Experiences</h3>
+        <button class="settings-nav-item" type="button" data-settings-toggle="voice-video" data-settings-page="voice-video" aria-expanded="false" aria-controls="settings-voice-video-submenu"><span class="settings-category-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a5 5 0 0 0-5 5v4a5 5 0 0 0 10 0V8a5 5 0 0 0-5-5zm-8 9v1a8 8 0 0 0 7 7.9V23h2v-2.1A8 8 0 0 0 20 13v-1h-2v1a6 6 0 0 1-12 0v-1z"/></svg></span><span class="settings-category-label">Voice &amp; Video</span></button>
+        <div class="settings-submenu" id="settings-voice-video-submenu" hidden>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="voice">Voice</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="camera">Camera</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="streaming">Streaming</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="voice-sounds">Sounds</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="soundboard">Soundboard</button>
+          <button class="settings-nav-item settings-submenu-item" type="button" data-settings-page="voice-advanced">Advanced</button>
+        </div>
+        <button class="settings-nav-item" type="button" data-settings-page="appearance">Appearance</button>
+        <button class="settings-nav-item" type="button" data-settings-page="themes">Themes</button>
+        <button class="settings-nav-item" type="button" data-settings-page="accessibility">Accessibility</button>
+        <button class="settings-nav-item" type="button" data-settings-page="system">System</button>
+        <button class="settings-nav-item" type="button" data-settings-page="language-time">Language &amp; Time</button>
+      </div>
+      <div class="settings-nav-group">
+        <h3 class="settings-nav-group-title">Games &amp; Apps</h3>
+        <button class="settings-nav-item" type="button" data-settings-page="registered-games">Registered Games</button>
+        <button class="settings-nav-item" type="button" data-settings-page="activity-privacy">Activity Privacy</button>
+        <button class="settings-nav-item" type="button" data-settings-page="clips">Clips</button>
+        <button class="settings-nav-item" type="button" data-settings-page="game-overlay">Game Overlay</button>
+        <button class="settings-nav-item" type="button" data-settings-page="connected-apps">Connected Apps</button>
+      </div>
+      <div class="settings-nav-group">
+        <button class="settings-nav-item" type="button" data-settings-page="developer">Developer</button>
+        <button class="settings-nav-item settings-logout" type="button" data-settings-action="logout">Log Out</button>
+      </div>
+    </nav>
+  </aside>
+  <main class="settings-content" id="settings-content" tabindex="-1">
+    <div class="settings-content-inner" id="settings-content-inner"></div>
+  </main>
+  <button class="settings-close" id="settings-close" type="button" aria-label="Close settings">×</button>
+  <span class="settings-close-hint" aria-hidden="true">ESC</span>
+  </div>
+</section>
+<div class="notice" id="notice" role="status" hidden></div>
+<div class="dm-finder" id="dm-finder" hidden>
+  <section class="dm-finder-dialog" role="dialog" aria-modal="true" aria-labelledby="dm-finder-title">
+    <h2 class="dm-finder-title" id="dm-finder-title">Search for servers, channels or DMs</h2>
+    <div class="dm-finder-search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+      <input class="dm-finder-search" id="dm-finder-search" type="search" autocomplete="off" placeholder="Where would you like to go?" aria-label="Search servers, channels or direct messages">
+    </div>
+    <div class="dm-finder-results" id="dm-finder-results" role="listbox" aria-label="Search destinations"></div>
+    <div class="dm-finder-foot">Search for a server, channel or direct message · <kbd>ESC</kbd> to close</div>
+  </section>
+</div>
+<section class="auth-gate" id="auth-gate" aria-label="Account sign in" hidden>
+  <div class="auth-card">
+    <div class="auth-brand">
+      <svg viewBox="400 300 480 680" aria-hidden="true"><path d="M640 310 C600 390 580 470 597 610 C560 612 520 570 511 510 C470 565 410 625 410 725 C410 860 510 970 640 970 C770 970 870 860 870 725 C870 620 830 570 760 490 C700 420 660 370 640 310 Z" fill="#ff9a4a"/><path d="M640 568 L676 705 L812 741 L676 777 L640 913 L605 777 L468 741 L605 705 Z" fill="#fff6e0"/></svg>
+      <strong>NovaFlames</strong>
+    </div>
+    <h1 id="auth-title">Welcome back</h1>
+    <p class="auth-copy" id="auth-copy">Sign in to join the conversation and sync messages across your devices.</p>
+    <form id="auth-form">
+      <div class="auth-fields">
+        <label id="auth-name-wrap" hidden>Display name
+          <input id="auth-name" name="name" autocomplete="name" maxlength="32" placeholder="How should people know you?">
+        </label>
+        <label id="auth-username-wrap" hidden>Username
+          <input id="auth-username" name="username" autocomplete="username" maxlength="24" pattern="[A-Za-z0-9_-]{3,24}" placeholder="3-24 letters, numbers, _ or -">
+        </label>
+        <label>Email
+          <input id="auth-email" name="email" type="email" autocomplete="email" maxlength="254" required>
+        </label>
+        <label>Password
+          <input id="auth-password" name="password" type="password" autocomplete="current-password" minlength="8" required>
+        </label>
+      </div>
+      <button class="auth-submit" id="auth-submit" type="submit">Sign in</button>
+    </form>
+    <p class="auth-switch"><span id="auth-switch-copy">New to NovaFlames?</span> <button id="auth-switch" type="button">Create an account</button></p>
+    <p class="auth-error" id="auth-error" role="alert" hidden></p>
+  </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  var SUPABASE_URL = "https://jwoxygwuoqqhfsngncaq.supabase.co";
+  var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_kIrIT1XZebj3eqW8xNuC4g_o-hjf-ca";
+  var TEST_MODE = true;
+  var AUTH_GATE_ENABLED = !TEST_MODE;
+  var dbClient = null;
+  var currentUser = null;
+  var authMode = "signin";
+  var messageLoadToken = 0;
+  var realtimeChannel = null;
+  var colors = ["#ff9a3c", "#ffd76a", "#b79bff", "#ff7a6b", "#7be0c3", "#8ab4ff"];
+  var snowflakeEpoch = 1420070400000;
+  var fixtureSnowflakeSequence = 0;
+  var localSnowflakeStorageKey = "novaflames-snowflake-state";
+  var localSnowflakeWorkerId = null;
+  function composeSnowflakeId(timestamp, worker, sequence) {
+    return ((BigInt(timestamp) << BigInt(22)) |
+      (BigInt(worker) << BigInt(12)) | BigInt(sequence)).toString();
+  }
+  function nextFixtureSnowflakeId() {
+    var sequence = fixtureSnowflakeSequence++;
+    return composeSnowflakeId(1 + Math.floor(sequence / 4096), 0, sequence % 4096);
+  }
+  function localSnowflakeWorker() {
+    if (localSnowflakeWorkerId !== null) return localSnowflakeWorkerId;
+    var savedWorker = sessionStorage.getItem(localSnowflakeStorageKey + "-worker");
+    if (savedWorker !== null && /^[0-9]{1,3}$/.test(savedWorker) &&
+        Number(savedWorker) > 0 && Number(savedWorker) < 1024) {
+      localSnowflakeWorkerId = Number(savedWorker);
+      return localSnowflakeWorkerId;
+    }
+    var random = new Uint16Array(1);
+    window.crypto.getRandomValues(random);
+    localSnowflakeWorkerId = random[0] % 1023 + 1;
+    sessionStorage.setItem(localSnowflakeStorageKey + "-worker", String(localSnowflakeWorkerId));
+    return localSnowflakeWorkerId;
+  }
+  function generateLocalSnowflake(storage, worker) {
+    var state = JSON.parse(storage.getItem(localSnowflakeStorageKey) || "{\"timestamp\":0,\"sequence\":-1}");
+    var timestamp = Math.max(Date.now() - snowflakeEpoch, Number(state.timestamp) || 0);
+    var sequence = timestamp === Number(state.timestamp) ? Number(state.sequence) + 1 : 0;
+    if (sequence > 4095) {
+      timestamp += 1;
+      sequence = 0;
+    }
+    storage.setItem(localSnowflakeStorageKey, JSON.stringify({ timestamp: timestamp, sequence: sequence }));
+    return composeSnowflakeId(timestamp, worker, sequence);
+  }
+  function nextLocalSnowflakeId() {
+    if (navigator.locks && navigator.locks.request) {
+      return navigator.locks.request(localSnowflakeStorageKey, function () {
+        return generateLocalSnowflake(localStorage, 1023);
+      });
+    }
+    return Promise.resolve(generateLocalSnowflake(sessionStorage, localSnowflakeWorker()));
+  }
+  var servers = [
+    { id: "ember", name: "Ember Lounge", short: "EL", tag: "EL" },
+    { id: "forge", name: "Forge Club", short: "FC", tag: "FC" },
+    { id: "night", name: "Night Shift", short: "NS", tag: "NS" }
+  ];
+  var channels = {
+    ember: [
+      { cat: "Info", items: [["welcome", "Start here"], ["announcements", "News from the team"]] },
+      { cat: "Text channels", items: [["general", "Anything goes"], ["clips", "Share your best moments"], ["help", "Ask the community"]] }
+    ],
+    forge: [{ cat: "Text channels", items: [["builds", "Show your work"], ["feedback", "Be kind, be useful"]] }],
+    night: [{ cat: "Text channels", items: [["late-chat", "For the night owls"], ["music", "What are you playing?"]] }]
+  };
+  var people = [
+    { n: "Mara", c: 0, s: "on" }, { n: "Jules", c: 1, s: "on" }, { n: "Kofi", c: 2, s: "on" },
+    { n: "Ines", c: 3, s: "away" }, { n: "Theo", c: 4, s: "on" }, { n: "Priya", c: 5, s: "off" }, { n: "Dario", c: 0, s: "off" }
+  ];
+  var dmContacts = [
+    { id: "Jules", name: "Jules", handle: "jules", color: 2, status: "on", pronouns: "they/them", serverTag: "EL", about: "Sharing ideas and making things together." },
+    { id: "Theo", name: "Theo", handle: "theo", color: 4, status: "on", pronouns: "he/him", serverTag: "FC", about: "Usually building something new." },
+    { id: "Mara", name: "Mara", handle: "mara", color: 0, status: "on", pronouns: "she/her", serverTag: "EL", about: "Welcome to the community!" },
+    { id: "Ines", name: "Ines", handle: "ines", color: 3, status: "away", pronouns: "she/her", serverTag: "NS", about: "Here for late-night chats." },
+    { id: "Kofi", name: "Kofi", handle: "kofi", color: 1, status: "on", pronouns: "they/them", serverTag: "NS", about: "Music enthusiast and playlist maker." }
+  ];
+  var seed = {
+    "ember/general": [["Mara", "Anyone up for a game tonight?"], ["Jules", "I'm in. Give me twenty minutes."], ["Kofi", "Count me in too. Bringing snacks."], ["Ines", "Voice channel opens at 9?"]],
+    "ember/welcome": [["Mara", "Welcome to Ember Lounge. Say hi in #general and grab a spot in the member list."]],
+    "ember/announcements": [["Jules", "Movie night moves to Friday. Details soon."]],
+    "ember/clips": [["Theo", "Last-second win from yesterday. Still can't believe it."]],
+    "ember/help": [["Priya", "How do I change my display name?"], ["Mara", "Open your profile and edit it there."]],
+    "forge/builds": [["Dario", "Finished the first prototype today."]],
+    "forge/feedback": [["Theo", "Drop your drafts here and we'll give notes."]],
+    "night/late-chat": [["Ines", "Can't sleep. What's everyone watching?"]],
+    "night/music": [["Kofi", "Playlist of the week is pinned."]],
+    "dm:Jules": [["Jules", "Hey! Welcome to NovaFlames ✨"], ["you", "Thanks! Still exploring all the channels."], ["Jules", "That soft green in #resources is exactly what I needed."], ["you", "I’ll take a look. That sounds lovely!"]],
+    "dm:Theo": [["Theo", "Still on for a co-working session later?"]],
+    "dm:Mara": [["Mara", "Welcome to the community! Say hi in #general when you get a chance."]],
+    "dm:Ines": [["Ines", "See you in the lounge later."]],
+    "dm:Kofi": [["Kofi", "Sending over that playlist now."]]
+  };
+  var store = {};
+  Object.keys(seed).forEach(function (k) {
+    store[k] = seed[k].map(function (m, i) { return { who: m[0], text: m[1], t: "4:" + (10 + i * 3) + " PM" }; });
+  });
+  var defaultServers = ["ember", "forge", "night"];
+  var customServers = [];
+  var customChannels = {};
+  var storageKey = "novaflames-discord-chat";
+  var cur = { srv: "ember", ch: "general" };
+  var isDMView = true;
+  var activeDM = "Jules";
+  var userProfile = {
+    name: "Mika Chen", handle: "mika", status: "Online", userId: "",
+    pronouns: "", customStatus: "", serverTag: ""
+  };
+  var fixtureUserSnowflakes = {};
+  people.forEach(function (person) {
+    fixtureUserSnowflakes[person.n] = nextFixtureSnowflakeId();
+    person.snowflakeId = fixtureUserSnowflakes[person.n];
+  });
+  dmContacts.forEach(function (contact) {
+    if (!fixtureUserSnowflakes[contact.name]) fixtureUserSnowflakes[contact.name] = nextFixtureSnowflakeId();
+    contact.snowflakeId = fixtureUserSnowflakes[contact.name];
+  });
+  userProfile.userId = nextFixtureSnowflakeId();
+  servers.forEach(function (server) { server.snowflakeId = nextFixtureSnowflakeId(); });
+  Object.keys(channels).forEach(function (serverId) {
+    channels[serverId].forEach(function (group) {
+      group.items.forEach(function (channel) { channel[2] = nextFixtureSnowflakeId(); });
+    });
+  });
+  Object.keys(store).forEach(function (key) {
+    store[key].forEach(function (message) {
+      message.snowflakeId = nextFixtureSnowflakeId();
+      message.senderSnowflakeId = message.who === "you"
+        ? userProfile.userId
+        : fixtureUserSnowflakes[message.who] || "";
+    });
+  });
+  var dmGroups = [];
+  var dmProfileVisible = true;
+  var dmSection = "chat";
+  var friendListFilter = "all";
+  var serverInvites = [];
+  var claimedQuests = [];
+  var sparkBalance = 0;
+  var $ = function (id) { return document.getElementById(id); };
+  var app = $("app");
+  var noticeTimer;
+
+  function showNotice(message) {
+    var notice = $("notice");
+    notice.textContent = message;
+    notice.hidden = false;
+    clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(function () { notice.hidden = true; }, 2600);
+  }
+
+  var settingsPages = {
+    account: ["Account", "Manage your NovaFlames account and profile information."],
+    "account-info": ["Account Info", "Review the profile information associated with your NovaFlames account."],
+    "password-security": ["Password & Security", "Manage your password and account security preferences."],
+    "account-status": ["Account Status", "Review the current status of your NovaFlames account."],
+    "family-center": ["Family Center", "Manage family safety and supervision preferences."],
+    privacy: ["Data & Privacy", "Review how your account data and privacy preferences are managed."],
+    "privacy-data": ["How Discord Uses My Data", "Review how your account data is used."],
+    "sponsored-content": ["Sponsored Content", "Manage preferences for sponsored content."],
+    "profile-privacy": ["Profile Privacy", "Manage the privacy of your profile information."],
+    "voice-e2ee": ["Voice End-to-end Encryption", "Review voice end-to-end encryption settings."],
+    permissions: ["Messaging Permissions", "Choose who can message you and include you in group conversations."],
+    "content-filters": ["Content Filters", "Manage filters for messages and other content."],
+    "spam-filters": ["Spam Filters", "Manage how suspected spam is filtered."],
+    "direct-messages": ["Direct Messages", "Choose who can send you direct messages."],
+    "friend-requests": ["Friend Requests", "Manage who can send you friend requests."],
+    "connected-games": ["Connected Games", "Manage messaging permissions for connected games."],
+    "ignore-block": ["Ignore & Block", "Manage ignored users and blocked accounts."],
+    notifications: ["Notifications", "Manage the alerts and notifications you receive from NovaFlames."],
+    "notification-overview": ["Overview", "Review your notification preferences."],
+    "notification-sounds": ["Sounds", "Choose which notification sounds are played."],
+    "notification-badges": ["Badges", "Manage notification badges."],
+    "notification-email": ["Email", "Manage email notifications."],
+    "notification-advanced": ["Advanced", "Manage advanced notification behavior."],
+    nitro: ["Nitro", "View NovaFlames Nitro features and membership options."],
+    "server-boost": ["Server Boost", "Manage boosts and support the servers you care about."],
+    subscription: ["Subscription", "Review your active and previous subscriptions."],
+    "gift-inventory": ["Gift Inventory", "View gifts and promotional items available to your account."],
+    "redeem-codes": ["Redeem Codes", "Redeem a code for an account benefit."],
+    "gifting-badge": ["The Gifting Badge", "Learn about your gifting badge."],
+    "gifts-purchased": ["Gifts I Purchased", "Review gifts purchased for other people."],
+    billing: ["Billing", "Manage billing details and view payment history."],
+    "payment-methods": ["Payment Methods", "Manage payment methods for your account."],
+    "transaction-history": ["Transaction History", "Review previous billing transactions."],
+    "voice-video": ["Voice & Video", "Adjust voice input, output, and video preferences."],
+    voice: ["Voice", "Choose voice input and output settings."],
+    camera: ["Camera", "Manage camera and video settings."],
+    streaming: ["Streaming", "Manage streaming quality and preferences."],
+    "voice-sounds": ["Sounds", "Manage voice and video sound preferences."],
+    soundboard: ["Soundboard", "Manage soundboard preferences."],
+    "voice-advanced": ["Advanced", "Manage advanced voice and video preferences."],
+    appearance: ["Appearance", "Adjust the look and display of your NovaFlames app."],
+    themes: ["Themes", "Choose a theme and customize your app colors."],
+    accessibility: ["Accessibility", "Adjust motion, contrast, and other accessibility preferences."],
+    system: ["System", "Manage startup and system integration preferences."],
+    "language-time": ["Language & Time", "Choose your language, time format, and regional preferences."],
+    "registered-games": ["Registered Games", "Manage the games recognized by NovaFlames."],
+    "activity-privacy": ["Activity Privacy", "Choose whether your activity is shared with other people."],
+    clips: ["Clips", "Manage clip capture and sharing preferences."],
+    "game-overlay": ["Game Overlay", "Manage the in-game overlay and its preferences."],
+    "connected-apps": ["Connected Apps", "Review apps connected to your NovaFlames account."],
+    developer: ["Developer", "Developer settings and tools for NovaFlames."]
+  };
+  var settingsSubmenus = {
+    account: "settings-account-submenu",
+    privacy: "settings-privacy-submenu",
+    permissions: "settings-permissions-submenu",
+    notifications: "settings-notifications-submenu",
+    "gift-inventory": "settings-gift-inventory-submenu",
+    billing: "settings-billing-submenu",
+    "voice-video": "settings-voice-video-submenu"
+  };
+  var firstSettingsSubpage = {
+    account: "account-info",
+    privacy: "privacy-data",
+    permissions: "content-filters",
+    notifications: "notification-overview",
+    "gift-inventory": "redeem-codes",
+    billing: "payment-methods",
+    "voice-video": "voice"
+  };
+  var settingsSubmenuParents = {
+    "account-info": "account", "password-security": "account", "account-status": "account", "family-center": "account",
+    "privacy-data": "privacy", "sponsored-content": "privacy", "profile-privacy": "privacy", "voice-e2ee": "privacy",
+    "content-filters": "permissions", "spam-filters": "permissions", "direct-messages": "permissions",
+    "friend-requests": "permissions", "connected-games": "permissions", "ignore-block": "permissions",
+    "notification-overview": "notifications", "notification-sounds": "notifications",
+    "notification-badges": "notifications", "notification-email": "notifications", "notification-advanced": "notifications",
+    "redeem-codes": "gift-inventory", "gifting-badge": "gift-inventory", "gifts-purchased": "gift-inventory",
+    "payment-methods": "billing", "transaction-history": "billing",
+    voice: "voice-video", camera: "voice-video", streaming: "voice-video", "voice-sounds": "voice-video",
+    soundboard: "voice-video", "voice-advanced": "voice-video"
+  };
+  function renderSettingsPage(pageId) {
+    var page = settingsPages[pageId];
+    if (!page) return;
+    var expandedSubmenu = settingsSubmenuParents[pageId] ||
+      (settingsSubmenus[pageId] ? pageId : "");
+    Object.keys(settingsSubmenus).forEach(function (submenuKey) {
+      var isExpanded = submenuKey === expandedSubmenu;
+      $(settingsSubmenus[submenuKey]).hidden = !isExpanded;
+      document.querySelector('[data-settings-toggle="' + submenuKey + '"]')
+        .setAttribute("aria-expanded", String(isExpanded));
+    });
+    document.querySelectorAll(".settings-nav-item[data-settings-page]").forEach(function (item) {
+      if (item.dataset.settingsPage === pageId || item.dataset.settingsToggle === expandedSubmenu) {
+        item.setAttribute("aria-current", "page");
+      }
+      else item.removeAttribute("aria-current");
+    });
+    var content = $("settings-content-inner");
+    content.textContent = "";
+    content.appendChild(el("h1", null, pageId === "account-info" ? "Account" : page[0]));
+    if (pageId !== "account-info") content.appendChild(el("p", "settings-description", page[1]));
+    if (pageId === "account-info") {
+      renderAccountInfoSettings(content);
+      return;
+    }
+    var panel = el("section", "settings-panel");
+    if (pageId === "account" || pageId === "account-info") {
+      panel.appendChild(el("h2", null, pageId === "account" ? "Account Information" : "Profile"));
+      var row = el("div", "settings-account-row");
+      var avatar = el("div", "settings-account-avatar", userProfile.name.charAt(0).toUpperCase());
+      var copy = el("div", "settings-account-copy");
+      copy.appendChild(el("strong", null, userProfile.name));
+      copy.appendChild(el("span", null, "@" + userProfile.handle + " · " + userProfile.status));
+      row.appendChild(avatar);
+      row.appendChild(copy);
+      panel.appendChild(row);
+    } else {
+      panel.appendChild(el("h2", null, page[0]));
+      panel.appendChild(el("p", "settings-description", page[1]));
+    }
+    content.appendChild(panel);
+  }
+
+  function maskedAccountValue(value, kind) {
+    if (!value) return "Not set";
+    if (kind === "email") {
+      var at = value.indexOf("@");
+      if (at < 1) return "••••••••";
+      return value.charAt(0) + "••••••••" + value.slice(at);
+    }
+    if (kind === "phone") return "••••••" + value.slice(-4);
+    return value;
+  }
+
+  function renderAccountInfoSettings(content) {
+    function section(title) {
+      var block = el("section", "settings-detail-section");
+      block.appendChild(el("h2", null, title));
+      content.appendChild(block);
+      return block;
+    }
+    function detailRow(parent, label, value, actionLabel, action, secondaryLabel, secondaryAction) {
+      var row = el("div", "settings-detail-row");
+      var copy = el("div", "settings-detail-copy");
+      copy.appendChild(el("strong", "settings-detail-label", label));
+      var valueNode = el("span", "settings-detail-value", value);
+      valueNode.dataset.accountValue = label.toLowerCase().replace(/[^a-z]+/g, "-");
+      copy.appendChild(valueNode);
+      var actions = el("div", "settings-detail-actions");
+      if (secondaryLabel) {
+        var secondary = el("button", "settings-detail-action secondary", secondaryLabel);
+        secondary.type = "button";
+        secondary.onclick = secondaryAction;
+        actions.appendChild(secondary);
+      }
+      if (actionLabel) {
+        var button = el("button", "settings-detail-action", actionLabel);
+        button.type = "button";
+        button.onclick = action;
+        actions.appendChild(button);
+      }
+      row.appendChild(copy);
+      row.appendChild(actions);
+      parent.appendChild(row);
+      return valueNode;
+    }
+
+    var profile = section("Account Info");
+    detailRow(profile, "Username", userProfile.handle, "Edit", function () {
+      var next = window.prompt("Choose a username.", userProfile.handle);
+      if (next === null) return;
+      next = next.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 24);
+      if (!/^[a-z0-9_-]{3,24}$/.test(next)) {
+        showNotice("Username must be 3-24 letters, numbers, underscores, or hyphens.");
+        return;
+      }
+      (async function () {
+        if (dbClient && currentUser) {
+          var result = await dbClient.from("profiles")
+            .update({ username: next }).eq("id", currentUser.id);
+          if (result.error) {
+            console.error("Could not update account username.", result.error);
+            showNotice("Username was not updated: " + result.error.message);
+            return;
+          }
+        }
+        userProfile.handle = next;
+        persistState();
+        renderProfile();
+        renderSettingsPage("account-info");
+        showNotice("Username updated");
+      })().catch(function (error) {
+        console.error("Could not update account username.", error);
+        showNotice("Username was not updated: " + (error.message || "Unknown error"));
+      });
+    });
+
+    var emailValue = currentUser && currentUser.email || "";
+    var emailNode = detailRow(profile, "Email", maskedAccountValue(emailValue, "email"), "Edit", function () {
+      if (!dbClient || !currentUser) {
+        showNotice("Email changes are unavailable in test mode.");
+        return;
+      }
+      var next = window.prompt("Enter your new email address.", currentUser.email || "");
+      if (next === null) return;
+      next = next.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) {
+        showNotice("Enter a valid email address.");
+        return;
+      }
+      dbClient.auth.updateUser({ email: next }).then(function (result) {
+        if (result.error) {
+          console.error("Could not update account email.", result.error);
+          showNotice("Email was not updated: " + result.error.message);
+          return;
+        }
+        showNotice("Check your new email to confirm the change.");
+      }).catch(function (error) {
+        console.error("Could not update account email.", error);
+        showNotice("Email was not updated: " + (error.message || "Unknown error"));
+      });
+    }, "Reveal", function () {
+      emailNode.textContent = emailNode.textContent === emailValue
+        ? maskedAccountValue(emailValue, "email")
+        : emailValue || "Not set";
+    });
+
+    var phoneValue = currentUser && currentUser.phone || "";
+    var phoneNode = detailRow(profile, "Phone Number", maskedAccountValue(phoneValue, "phone"), "Edit", function () {
+      if (!dbClient || !currentUser) {
+        showNotice("Phone number changes are unavailable in test mode.");
+        return;
+      }
+      var next = window.prompt("Enter your phone number, including country code.", currentUser.phone || "");
+      if (next === null) return;
+      next = next.trim();
+      if (next && !/^\+[1-9]\d{7,14}$/.test(next)) {
+        showNotice("Enter a valid phone number with country code, such as +15551234567.");
+        return;
+      }
+      dbClient.auth.updateUser({ phone: next }).then(function (result) {
+        if (result.error) {
+          console.error("Could not update account phone number.", result.error);
+          showNotice("Phone number was not updated: " + result.error.message);
+          return;
+        }
+        showNotice(next ? "Check your phone for a verification code." : "Phone number removed.");
+      }).catch(function (error) {
+        console.error("Could not update account phone number.", error);
+        showNotice("Phone number was not updated: " + (error.message || "Unknown error"));
+      });
+    }, "Reveal", function () {
+      phoneNode.textContent = phoneNode.textContent === phoneValue
+        ? maskedAccountValue(phoneValue, "phone")
+        : phoneValue || "Not set";
+    });
+
+    var security = section("Password & Security");
+    detailRow(security, "Password", "••••••••", "Edit", function () {
+      if (!dbClient || !currentUser) {
+        showNotice("Password changes are unavailable in test mode.");
+        return;
+      }
+      var next = window.prompt("Enter a new password (at least 8 characters).");
+      if (next === null) return;
+      if (next.length < 8) {
+        showNotice("Password must be at least 8 characters.");
+        return;
+      }
+      dbClient.auth.updateUser({ password: next }).then(function (result) {
+        if (result.error) {
+          console.error("Could not update account password.", result.error);
+          showNotice("Password was not updated: " + result.error.message);
+          return;
+        }
+        showNotice("Password updated");
+      }).catch(function (error) {
+        console.error("Could not update account password.", error);
+        showNotice("Password was not updated: " + (error.message || "Unknown error"));
+      });
+    });
+    detailRow(security, "Multi-Factor Authentication", "Not enabled", null, null);
+    detailRow(security, "Logged-in Devices", "Device management is unavailable", null, null);
+
+    var status = section("Account Status");
+    var statusCard = el("div", "settings-status-card");
+    statusCard.appendChild(el("div", "settings-status-icon", "◉"));
+    var statusCopy = el("div", "settings-status-copy");
+    statusCopy.appendChild(el("strong", null, "Age Group"));
+    statusCopy.appendChild(el("span", null, "Not set. Age information has not been provided for this account."));
+    statusCard.appendChild(statusCopy);
+    status.appendChild(statusCard);
+  }
+
+  function openSettings() {
+    $("profile-card").hidden = true;
+    $("profile-button").setAttribute("aria-expanded", "false");
+    $("settings-screen").hidden = false;
+    $("settings-search").value = "";
+    document.querySelectorAll(".settings-nav-group").forEach(function (group) {
+      group.hidden = false;
+      group.querySelectorAll(".settings-nav-item").forEach(function (item) { item.hidden = false; });
+    });
+    $("settings-account-submenu").hidden = false;
+    document.querySelector('[data-settings-toggle="account"]').setAttribute("aria-expanded", "true");
+    renderSettingsPage("account-info");
+    $("settings-search").focus();
+  }
+
+  function closeSettings() {
+    if ($("settings-screen").hidden) return;
+    $("settings-screen").hidden = true;
+    $("profile-settings").focus();
+  }
+
+  async function logOutFromSettings() {
+    if (!currentUser) {
+      showNotice("No signed-in account is available to log out.");
+      return;
+    }
+    if (!dbClient) {
+      showNotice("Log out is unavailable while running in test mode.");
+      return;
+    }
+    var result = await dbClient.auth.signOut();
+    if (result.error) {
+      console.error("Could not sign out.", result.error);
+      showNotice("Log out failed: " + result.error.message);
+      return;
+    }
+    closeSettings();
+  }
+
+  function showAuthError(message) {
+    $("auth-error").textContent = message;
+    $("auth-error").hidden = !message;
+  }
+
+  function setAuthMode(mode) {
+    authMode = mode;
+    var signingUp = mode === "signup";
+    $("auth-title").textContent = signingUp ? "Create your account" : "Welcome back";
+    $("auth-copy").textContent = signingUp
+      ? "Create an account to chat with your community and sync messages across devices."
+      : "Sign in to join the conversation and sync messages across your devices.";
+    $("auth-name-wrap").hidden = !signingUp;
+    $("auth-username-wrap").hidden = !signingUp;
+    $("auth-name").required = signingUp;
+    $("auth-username").required = signingUp;
+    $("auth-password").autocomplete = signingUp ? "new-password" : "current-password";
+    $("auth-submit").textContent = signingUp ? "Create account" : "Sign in";
+    $("auth-switch-copy").textContent = signingUp ? "Already have an account?" : "New to NovaFlames?";
+    $("auth-switch").textContent = signingUp ? "Sign in" : "Create an account";
+    showAuthError("");
+  }
+
+  function showSignIn(message) {
+    if (AUTH_GATE_ENABLED) {
+      app.inert = true;
+      $("auth-gate").hidden = false;
+      showAuthError(message || "");
+      return;
+    }
+    app.inert = false;
+    $("auth-gate").hidden = true;
+    if (message) showNotice(message);
+  }
+
+  function contactFor(id) {
+    return dmContacts.filter(function (contact) { return contact.id === id || contact.name === id; })[0] ||
+      dmGroups.filter(function (group) { return group.id === id; })[0] ||
+      { id: null, name: "Direct Messages", handle: "", color: 0, status: "off", preview: "Choose an account to start chatting." };
+  }
+
+  function activeMessageKey() {
+    if (isDMView) {
+      var contact = contactFor(activeDM);
+      return contact.group ? contact.id : "dm:" + (activeDM || "none");
+    }
+    return cur.srv + "/" + cur.ch;
+  }
+
+  function configureRealtime() {
+    if (!dbClient) return;
+    if (realtimeChannel) dbClient.removeChannel(realtimeChannel);
+    realtimeChannel = dbClient.channel("nova-messages")
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, function (payload) {
+        var message = payload.new;
+        if (!message) return;
+        if (!isDMView && message.kind === "channel" &&
+            message.server_id === cur.srv && message.channel_name === cur.ch) {
+          loadCurrentMessages();
+        } else if (isDMView && message.kind === "dm") {
+          var contact = contactFor(activeDM);
+          if (contact.id && (
+            (message.sender_id === currentUser.id && message.recipient_id === contact.id) ||
+            (message.sender_id === contact.id && message.recipient_id === currentUser.id)
+          )) loadCurrentMessages();
+        }
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, function () {
+        if (currentUser) {
+          loadAccountData(currentUser).then(renderAll).catch(function (error) {
+            console.error("Could not refresh account directory.", error);
+            showNotice("Account directory could not be refreshed.");
+          });
+        }
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "chat_servers" }, function () {
+        loadCommunityStructure().then(renderAll).catch(function (error) {
+          console.error("Could not refresh servers.", error);
+          showNotice("Server list could not be refreshed.");
+        });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "chat_channels" }, function () {
+        loadCommunityStructure().then(renderAll).catch(function (error) {
+          console.error("Could not refresh channels.", error);
+          showNotice("Channel list could not be refreshed.");
+        });
+      })
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "server_invites",
+        filter: "invitee_id=eq." + currentUser.id
+      }, function (payload) {
+        if (payload.new && payload.new.id) {
+          loadServerInvites(payload.new.id).then(renderAll).catch(function (error) {
+            console.error("Could not load a received server invite.", error);
+            showNotice("A server invite arrived but could not be loaded.");
+          });
+        }
+      })
+      .subscribe(function (status) {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          showNotice("Live message sync disconnected. Reload the page to reconnect.");
+        }
+      });
+  }
+
+  async function loadCommunityStructure() {
+    if (!dbClient || !currentUser) return;
+    var results = await Promise.all([
+      dbClient.from("chat_servers").select("id,snowflake_id,name,short").order("name", { ascending: true }),
+      dbClient.from("chat_channels").select("server_id,name,snowflake_id,topic").order("name", { ascending: true })
+    ]);
+    var serverResult = results[0], channelResult = results[1];
+    if (serverResult.error || channelResult.error) {
+      var error = serverResult.error || channelResult.error;
+      console.error("Could not load shared servers and channels.", error);
+      showNotice("Server setup is incomplete. Apply supabase-setup.sql to enable shared channels.");
+      return;
+    }
+    serverResult.data.forEach(function (server) {
+      var existing = servers.filter(function (item) { return item.id === server.id; })[0];
+      if (existing) {
+        existing.name = server.name;
+        existing.short = server.short;
+        existing.snowflakeId = server.snowflake_id;
+      } else {
+        servers.push({ id: server.id, name: server.name, short: server.short, snowflakeId: server.snowflake_id });
+      }
+      if (!channels[server.id]) channels[server.id] = [{ cat: "Text channels", items: [] }];
+    });
+    channelResult.data.forEach(function (channel) {
+      if (!channels[channel.server_id]) return;
+      var groups = channels[channel.server_id];
+      var exists = groups.some(function (group) {
+        return group.items.some(function (item) { return item[0] === channel.name; });
+      });
+      if (exists) {
+        groups.forEach(function (group) {
+          group.items.forEach(function (item) {
+            if (item[0] === channel.name) item[2] = channel.snowflake_id;
+          });
+        });
+      } else {
+        var textGroup = groups.filter(function (group) { return group.cat === "Text channels"; })[0];
+        if (!textGroup) { textGroup = { cat: "Text channels", items: [] }; groups.push(textGroup); }
+        textGroup.items.push([channel.name, channel.topic, channel.snowflake_id]);
+      }
+    });
+    if (!servers.some(function (server) { return server.id === cur.srv; })) {
+      cur.srv = servers.length ? servers[0].id : "ember";
+      cur.ch = channels[cur.srv][0].items[0][0];
+    } else if (!channels[cur.srv].some(function (group) {
+      return group.items.some(function (item) { return item[0] === cur.ch; });
+    })) {
+      cur.ch = channels[cur.srv][0].items[0][0];
+    }
+  }
+
+  async function loadServerInvites(newInviteId) {
+    if (TEST_MODE || !dbClient || !currentUser) return;
+    var result;
+    try {
+      result = await dbClient.from("server_invites")
+        .select("id,snowflake_id,server_id,inviter_id,invitee_id,status,created_at,server:chat_servers!server_invites_server_id_fkey(name,snowflake_id),inviter:profiles!server_invites_inviter_id_fkey(display_name,username,snowflake_id)")
+        .eq("invitee_id", currentUser.id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+    } catch (error) {
+      console.error("Could not load server invites.", error);
+      showNotice("Server invites could not be loaded: " + (error.message || "Check your connection."));
+      return;
+    }
+    if (result.error) {
+      console.error("Could not load server invites.", result.error);
+      showNotice("Server invites could not be loaded: " + result.error.message);
+      return;
+    }
+    serverInvites = result.data.map(function (row) {
+      var server = Array.isArray(row.server) ? row.server[0] : row.server;
+      var inviter = Array.isArray(row.inviter) ? row.inviter[0] : row.inviter;
+      return {
+        id: row.id,
+        snowflakeId: row.snowflake_id,
+        serverId: row.server_id,
+        serverSnowflakeId: server && server.snowflake_id,
+        serverName: server && server.name || "a server",
+        inviterId: row.inviter_id,
+        inviterSnowflakeId: inviter && inviter.snowflake_id,
+        inviterName: inviter && (inviter.display_name || inviter.username) || "A NovaFlames member",
+        inviterHandle: inviter && inviter.username || "",
+        status: row.status,
+        createdAt: row.created_at
+      };
+    });
+    if (newInviteId) {
+      var newInvite = serverInvites.filter(function (invite) { return invite.id === newInviteId; })[0];
+      if (newInvite) showNotice(newInvite.inviterName + " invited you to " + newInvite.serverName);
+    }
+  }
+
+  async function loadCurrentMessages() {
+    if (!dbClient || !currentUser) return;
+    var key = activeMessageKey();
+    var token = ++messageLoadToken;
+    var query = dbClient.from("messages").select(
+      "id,snowflake_id,kind,server_id,channel_name,sender_id,recipient_id,content,created_at,sender:profiles!messages_sender_id_fkey(display_name,username,snowflake_id)"
+    );
+    if (isDMView) {
+      var contact = contactFor(activeDM);
+      if (!contact.id) {
+        store[key] = [];
+        renderFeed();
+        return;
+      }
+      query = query.eq("kind", "dm").or(
+        "and(sender_id.eq." + currentUser.id + ",recipient_id.eq." + contact.id + ")," +
+        "and(sender_id.eq." + contact.id + ",recipient_id.eq." + currentUser.id + ")"
+      );
+    } else {
+      query = query.eq("kind", "channel").eq("server_id", cur.srv).eq("channel_name", cur.ch);
+    }
+    store[key] = [];
+    renderFeed();
+    var result;
+    try {
+      result = await query.order("created_at", { ascending: true }).limit(500);
+    } catch (error) {
+      if (token !== messageLoadToken) return;
+      console.error("Could not load shared messages.", error);
+      showNotice("Messages could not be loaded. Check your connection and try again.");
+      return;
+    }
+    if (token !== messageLoadToken) return;
+    if (result.error) {
+      console.error("Could not load shared messages.", result.error);
+      showNotice("Messages could not be loaded: " + result.error.message);
+      return;
+    }
+    store[key] = result.data.map(function (row) {
+      var sender = Array.isArray(row.sender) ? row.sender[0] : row.sender;
+      return {
+        who: sender && sender.display_name || sender && sender.username || "NovaFlames member",
+        senderId: row.sender_id,
+        senderSnowflakeId: sender && sender.snowflake_id,
+        snowflakeId: row.snowflake_id,
+        text: row.content,
+        t: new Date(row.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+      };
+    });
+    renderFeed();
+    filterMessages();
+  }
+
+  async function loadAccountData(user) {
+    var profileResult = await dbClient.from("profiles")
+      .select("id,snowflake_id,display_name,username").eq("id", user.id).maybeSingle();
+    if (profileResult.error) {
+      console.error("Could not load account profile.", profileResult.error);
+      showNotice("Account setup is incomplete. Apply supabase-setup.sql in your Supabase project.");
+    }
+    if (profileResult.data) {
+      userProfile.name = profileResult.data.display_name;
+      userProfile.handle = profileResult.data.username;
+      userProfile.userId = profileResult.data.snowflake_id;
+    } else {
+      userProfile.name = user.user_metadata && user.user_metadata.display_name || user.email || "NovaFlames member";
+      userProfile.handle = user.user_metadata && user.user_metadata.username || "member";
+      userProfile.userId = "";
+    }
+    var directoryResult = await dbClient.from("profiles")
+      .select("id,snowflake_id,display_name,username").order("display_name", { ascending: true });
+    if (directoryResult.error) {
+      console.error("Could not load the account directory.", directoryResult.error);
+      showNotice("The account directory could not be loaded: " + directoryResult.error.message);
+      return;
+    }
+    dmContacts = directoryResult.data.filter(function (profile) { return profile.id !== user.id; })
+      .map(function (profile, index) {
+        return {
+          id: profile.id,
+          snowflakeId: profile.snowflake_id,
+          name: profile.display_name,
+          handle: profile.username,
+          color: index % colors.length,
+          status: "on",
+          preview: "Start a private conversation."
+        };
+      });
+    people = directoryResult.data.map(function (profile, index) {
+      return { n: profile.display_name, c: index % colors.length, s: "on", snowflakeId: profile.snowflake_id };
+    });
+    if (!dmContacts.some(function (contact) { return contact.id === activeDM; })) {
+      activeDM = dmContacts.length ? dmContacts[0].id : null;
+    }
+  }
+
+  async function activateSession(user) {
+    if (!user || (currentUser && currentUser.id === user.id && $("auth-gate").hidden)) return;
+    currentUser = user;
+    store = {};
+    dmContacts = [];
+    activeDM = null;
+    $("auth-gate").hidden = true;
+    app.inert = false;
+    try {
+      await loadAccountData(user);
+      await loadCommunityStructure();
+      await loadServerInvites();
+      configureRealtime();
+      renderAll();
+    } catch (error) {
+      console.error("Could not load NovaFlames account data.", error);
+      showNotice("Your account is signed in, but account data could not be loaded.");
+      renderAll();
+    }
+  }
+
+  async function initializeBackend() {
+    if (TEST_MODE) {
+      app.inert = false;
+      $("auth-gate").hidden = true;
+      return Promise.resolve();
+    }
+    if (!AUTH_GATE_ENABLED) {
+      app.inert = false;
+      $("auth-gate").hidden = true;
+    }
+    if (!window.supabase || !window.supabase.createClient) {
+      showSignIn("Supabase could not be loaded. Check your connection and reload.");
+      return;
+    }
+    if (SUPABASE_URL.indexOf("YOUR_") === 0 || SUPABASE_PUBLISHABLE_KEY.indexOf("YOUR_") === 0) {
+      showSignIn("Add your Supabase project URL and publishable key to this file before signing in.");
+      return;
+    }
+    dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    var sessionResult;
+    try {
+      sessionResult = await dbClient.auth.getSession();
+    } catch (error) {
+      showSignIn("Could not connect to Supabase: " + error.message);
+      return;
+    }
+    if (sessionResult.error) {
+      showSignIn("Could not restore your session: " + sessionResult.error.message);
+      return;
+    }
+    if (sessionResult.data.session) await activateSession(sessionResult.data.session.user);
+    dbClient.auth.onAuthStateChange(function (event, session) {
+      window.setTimeout(function () {
+        if (session) activateSession(session.user);
+        else if (event === "SIGNED_OUT") {
+          currentUser = null;
+          if (realtimeChannel) dbClient.removeChannel(realtimeChannel);
+          realtimeChannel = null;
+          dmContacts = [];
+          activeDM = null;
+          $("auth-gate").hidden = !AUTH_GATE_ENABLED;
+          app.inert = AUTH_GATE_ENABLED;
+          setAuthMode("signin");
+        }
+      }, 0);
+    });
+    if (!sessionResult.data.session) showSignIn("");
+  }
+
+  function persistState() {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({
+        servers: customServers,
+        channels: customChannels,
+        messages: store,
+        profile: userProfile,
+        dmGroups: dmGroups,
+        serverInvites: TEST_MODE ? serverInvites : undefined,
+        claimedQuests: claimedQuests,
+        sparkBalance: sparkBalance
+      }));
+    } catch (error) {
+      console.error("Could not save NovaFlames chat data.", error);
+      showNotice("Changes could not be saved in this browser.");
+    }
+  }
+
+  function restoreState() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+      if (!saved || typeof saved !== "object") return;
+      if (Array.isArray(saved.servers)) {
+        saved.servers.forEach(function (item) {
+          if (!item || !item.server || typeof item.server.id !== "string" ||
+              typeof item.server.name !== "string" || !/^[a-z0-9-]{1,32}$/.test(item.server.id) ||
+              defaultServers.indexOf(item.server.id) !== -1 ||
+              servers.some(function (server) { return server.id === item.server.id; }) ||
+              !Array.isArray(item.groups)) return;
+          servers.push(item.server);
+          channels[item.server.id] = item.groups.filter(function (group) {
+            return group && typeof group.cat === "string" && Array.isArray(group.items) &&
+              group.items.every(function (channel) {
+                return Array.isArray(channel) && typeof channel[0] === "string" && typeof channel[1] === "string";
+              });
+          });
+          customServers.push(item);
+        });
+      }
+      if (saved.channels && typeof saved.channels === "object") {
+        Object.keys(saved.channels).forEach(function (serverId) {
+          var additions = saved.channels[serverId];
+          if (!channels[serverId] || !Array.isArray(additions)) return;
+          additions.forEach(function (channel) {
+            if (!channel || typeof channel.name !== "string" || typeof channel.topic !== "string" ||
+                !/^[a-z0-9-]{1,32}$/.test(channel.name)) return;
+            var groups = channels[serverId];
+            var exists = groups.some(function (group) {
+              return group.items.some(function (item) { return item[0] === channel.name; });
+            });
+            if (!exists) {
+              var textGroup = groups.filter(function (group) { return group.cat === "Text channels"; })[0];
+              if (!textGroup) { textGroup = { cat: "Text channels", items: [] }; groups.push(textGroup); }
+              textGroup.items.push([channel.name, channel.topic]);
+              if (!customChannels[serverId]) customChannels[serverId] = [];
+              customChannels[serverId].push(channel);
+            }
+          });
+        });
+      }
+      if (saved.messages && typeof saved.messages === "object") {
+        Object.keys(saved.messages).forEach(function (key) {
+          var messages = saved.messages[key];
+          if (Array.isArray(messages) && messages.every(function (message) {
+            return message && typeof message.who === "string" && typeof message.text === "string" &&
+              typeof message.t === "string";
+          })) store[key] = messages;
+        });
+      }
+      if (saved.profile && typeof saved.profile.name === "string" &&
+          typeof saved.profile.handle === "string" &&
+          ["Online", "Idle", "Do Not Disturb", "Invisible"].indexOf(saved.profile.status) !== -1) {
+        userProfile.name = saved.profile.name.slice(0, 32);
+        userProfile.handle = channelSlug(saved.profile.handle).slice(0, 24) || "mika";
+        userProfile.status = saved.profile.status;
+        if (typeof saved.profile.pronouns === "string") userProfile.pronouns = saved.profile.pronouns.slice(0, 32);
+        if (typeof saved.profile.customStatus === "string") userProfile.customStatus = saved.profile.customStatus.slice(0, 80);
+        if (typeof saved.profile.serverTag === "string") userProfile.serverTag = saved.profile.serverTag;
+      }
+      if (Array.isArray(saved.dmGroups)) {
+        dmGroups = saved.dmGroups.filter(function (group) {
+          return group && typeof group.id === "string" && group.id.indexOf("group:") === 0 &&
+            typeof group.name === "string" && Array.isArray(group.participants) &&
+            group.participants.length > 0 && group.participants.every(function (id) {
+              return dmContacts.some(function (contact) { return contact.id === id; });
+            });
+        });
+      }
+      if (TEST_MODE && Array.isArray(saved.serverInvites)) {
+        serverInvites = saved.serverInvites.filter(function (invite) {
+          return invite && typeof invite.id === "string" &&
+            typeof invite.serverId === "string" && /^[a-z0-9-]{1,32}$/.test(invite.serverId) &&
+            typeof invite.serverName === "string" && invite.serverName.length > 0 && invite.serverName.length <= 40 &&
+            typeof invite.inviterName === "string" && invite.inviterName.length > 0 &&
+            (invite.status === "pending" || invite.status === "accepted" || invite.status === "declined");
+        });
+      }
+      if (Array.isArray(saved.claimedQuests)) {
+        claimedQuests = saved.claimedQuests.filter(function (id) { return typeof id === "string"; });
+      }
+      if (Number.isFinite(saved.sparkBalance) && saved.sparkBalance >= 0) sparkBalance = saved.sparkBalance;
+    } catch (error) {
+      console.error("Could not load saved NovaFlames chat data.", error);
+      showNotice("Saved chat data could not be loaded.");
+    }
+  }
+
+  function isSnowflakeId(value) {
+    return typeof value === "string" && /^[0-9]{1,20}$/.test(value);
+  }
+
+  function ensureLocalSnowflakeIds() {
+    if (!isSnowflakeId(userProfile.userId)) userProfile.userId = nextFixtureSnowflakeId();
+    servers.forEach(function (server) {
+      if (!isSnowflakeId(server.snowflakeId)) server.snowflakeId = nextFixtureSnowflakeId();
+    });
+    Object.keys(channels).forEach(function (serverId) {
+      channels[serverId].forEach(function (group) {
+        group.items.forEach(function (channel) {
+          if (!isSnowflakeId(channel[2])) channel[2] = nextFixtureSnowflakeId();
+        });
+      });
+    });
+    Object.keys(store).forEach(function (key) {
+      store[key].forEach(function (message) {
+        if (!isSnowflakeId(message.snowflakeId)) message.snowflakeId = nextFixtureSnowflakeId();
+        if (!isSnowflakeId(message.senderSnowflakeId)) {
+          message.senderSnowflakeId = message.senderId === "local-user" || message.who === "you"
+            ? userProfile.userId
+            : fixtureUserSnowflakes[message.who] || "";
+        }
+      });
+    });
+    dmContacts.forEach(function (contact) {
+      if (!isSnowflakeId(contact.snowflakeId)) {
+        contact.snowflakeId = fixtureUserSnowflakes[contact.name] || nextFixtureSnowflakeId();
+      }
+    });
+    dmGroups.forEach(function (group) {
+      if (!isSnowflakeId(group.snowflakeId)) group.snowflakeId = nextFixtureSnowflakeId();
+    });
+    serverInvites.forEach(function (invite) {
+      if (!isSnowflakeId(invite.snowflakeId)) invite.snowflakeId = nextFixtureSnowflakeId();
+      if (!isSnowflakeId(invite.serverSnowflakeId)) invite.serverSnowflakeId = nextFixtureSnowflakeId();
+      if (!isSnowflakeId(invite.channelSnowflakeId)) invite.channelSnowflakeId = nextFixtureSnowflakeId();
+    });
+    Object.keys(customChannels).forEach(function (serverId) {
+      customChannels[serverId].forEach(function (channel) {
+        var channelEntry = channels[serverId].reduce(function (found, group) {
+          return found || group.items.filter(function (item) { return item[0] === channel.name; })[0];
+        }, null);
+        if (channelEntry) channel.snowflakeId = channelEntry[2];
+      });
+    });
+  }
+
+  function channelSlug(value) {
+    return value.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
+  }
+
+  function colorFor(n) {
+    var p = people.filter(function (x) { return x.n === n; })[0];
+    return colors[p ? p.c : 0];
+  }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function renderProfile() {
+    var statusClass = userProfile.status === "Idle" ? "away" :
+      userProfile.status === "Do Not Disturb" ? "busy" :
+      userProfile.status === "Invisible" ? "invisible" : "";
+    $("profile-small-name").textContent = userProfile.name.split(/\s+/)[0];
+    $("profile-card-name").textContent = userProfile.name;
+    $("profile-card-handle").textContent = "@" + userProfile.handle + " · NovaFlames";
+    $("profile-pronouns").value = userProfile.pronouns || "";
+    var statusButton = $("profile-custom-status");
+    statusButton.textContent = userProfile.customStatus || "+";
+    statusButton.classList.toggle("empty", !userProfile.customStatus);
+    statusButton.setAttribute("aria-label", userProfile.customStatus ? "Edit custom status" : "Set a custom status");
+    statusButton.title = userProfile.customStatus ? "Edit custom status" : "Set a custom status";
+    var tagSelect = $("profile-server-tag");
+    var selectedTag = userProfile.serverTag || "";
+    tagSelect.textContent = "";
+    var noTag = el("option", null, "No tag");
+    noTag.value = "";
+    tagSelect.appendChild(noTag);
+    servers.forEach(function (server) {
+      var tag = server.tag || server.short;
+      if (!tag) return;
+      var option = el("option", null, tag + " · " + server.name);
+      option.value = server.id;
+      tagSelect.appendChild(option);
+    });
+    tagSelect.value = selectedTag;
+    $("profile-large-avatar").textContent = userProfile.name.charAt(0).toUpperCase();
+    $("profile-small-avatar").textContent = userProfile.name.charAt(0).toUpperCase();
+    $("profile-large-avatar").className = "profile-large-avatar " + statusClass;
+    $("profile-small-avatar").className = "av dot " + statusClass;
+    $("profile-small-status").textContent = userProfile.status;
+    $("profile-status-label").textContent = userProfile.status;
+    $("profile-activity-status").textContent = "Community member · " + userProfile.status;
+    $("profile-status-dot").className = "profile-status-dot " + statusClass;
+    $("profile-status-options").querySelectorAll("[data-status-value]").forEach(function (option) {
+      option.setAttribute("aria-checked", String(option.dataset.statusValue === userProfile.status));
+    });
+  }
+
+  function renderDMProfile() {
+    var panel = $("dm-profile");
+    panel.textContent = "";
+    panel.hidden = !isDMView || dmSection !== "chat" || !dmProfileVisible;
+    if (!isDMView || dmSection !== "chat" || !dmProfileVisible) return;
+    var contact = contactFor(activeDM);
+    if (!contact.id) {
+      panel.appendChild(el("h2", null, "Direct Messages"));
+      panel.appendChild(el("p", null, "Choose someone to see their profile."));
+      return;
+    }
+    var avatar = el("div", "av dm-profile-avatar dot", contact.name.charAt(0).toUpperCase());
+    avatar.style.background = colors[contact.color] || colors[0];
+    if (contact.status === "away") avatar.classList.add("away");
+    panel.appendChild(avatar);
+    panel.appendChild(el("h2", null, contact.name));
+    if (!contact.group) panel.appendChild(el("div", "dm-profile-handle", "@" + contact.handle));
+    if (contact.customStatus) panel.appendChild(el("div", "dm-profile-custom", contact.customStatus));
+    if (contact.pronouns) panel.appendChild(el("div", "dm-profile-handle", contact.pronouns));
+    if (contact.serverTag) panel.appendChild(el("span", "profile-tag-pill", contact.serverTag));
+    var about = el("section", "dm-profile-section");
+    about.appendChild(el("h3", null, contact.group ? "Members" : "About me"));
+    about.appendChild(el("p", null, contact.group
+      ? contact.participants.map(function (id) { return contactFor(id).name; }).join(", ")
+      : contact.about || "No profile details have been added yet."));
+    panel.appendChild(about);
+    var pins = el("section", "dm-profile-section");
+    pins.appendChild(el("h3", null, "Pinned messages"));
+    pins.appendChild(el("p", null, "No pinned messages yet."));
+    panel.appendChild(pins);
+  }
+
+  function renderFriendsRail() {
+    var rail = $("friends-rail");
+    rail.textContent = "";
+    rail.hidden = !isDMView || dmSection !== "chat";
+    if (!isDMView || dmSection !== "chat") return;
+    rail.appendChild(el("div", "friend-rail-title", "Friends"));
+    dmContacts.forEach(function (contact) {
+      var statusClass = contact.status === "away" ? " away" : contact.status === "off" ? " offline" : "";
+      var friend = el("button", "friend-avatar" + statusClass + (activeDM === contact.id ? " on" : ""),
+        contact.name.charAt(0).toUpperCase());
+      friend.type = "button";
+      friend.title = contact.name + " · @" + contact.handle;
+      friend.setAttribute("aria-label", "Open direct message with " + contact.name);
+      friend.style.background = colors[contact.color] || colors[0];
+      friend.onclick = function () {
+        activeDM = contact.id;
+        isDMView = true;
+        renderAll();
+        app.classList.remove("open", "members-open", "profile-open");
+      };
+      rail.appendChild(friend);
+    });
+    if (!dmContacts.length) rail.appendChild(el("span", "dm-empty", "No friends yet"));
+  }
+
+  function renderRail() {
+    var rail = $("rail"); rail.textContent = "";
+    var home = el("button", "srv home" + (isDMView ? " on" : ""));
+    home.setAttribute("aria-label", "Direct messages");
+    home.innerHTML = '<svg viewBox="400 300 480 680" role="img" aria-label="NovaFlames"><defs><linearGradient id="railNova" gradientUnits="userSpaceOnUse" x1="560" y1="330" x2="780" y2="960"><stop offset="0" stop-color="#ffcf40"/><stop offset=".4" stop-color="#ff9a4a"/><stop offset=".8" stop-color="#f0539f"/><stop offset="1" stop-color="#b23fd0"/></linearGradient></defs><path d="M640 310 C600 390 580 470 597 610 C560 612 520 570 511 510 C470 565 410 625 410 725 C410 860 510 970 640 970 C770 970 870 860 870 725 C870 620 830 570 760 490 C700 420 660 370 640 310 Z" fill="url(#railNova)"/><path d="M640 568 L676 705 L812 741 L676 777 L640 913 L605 777 L468 741 L605 705 Z" fill="#fff6e0"/></svg>';
+    home.title = "Direct messages";
+    home.onclick = function () {
+      isDMView = true;
+      dmSection = "chat";
+      renderAll();
+      app.classList.remove("open", "members-open");
+    };
+    rail.appendChild(home);
+    rail.appendChild(el("div", "sep"));
+    servers.forEach(function (s) {
+      var b = el("button", "srv" + (!isDMView && s.id === cur.srv ? " on" : ""), s.short);
+      b.title = s.name;
+      b.setAttribute("aria-label", s.name);
+      b.dataset.snowflakeId = s.snowflakeId || "";
+      b.onclick = function () {
+        isDMView = false;
+        cur.srv = s.id; cur.ch = channels[s.id][0].items[0][0];
+        renderAll();
+        app.classList.remove("open", "members-open");
+      };
+      rail.appendChild(b);
+    });
+    var add = el("button", "srv add", "+");
+    add.setAttribute("aria-label", "Add a server");
+    add.title = "Add a server";
+    add.onclick = async function () {
+      var enteredName = window.prompt("What should this server be called?");
+      if (enteredName === null) return;
+      var name = enteredName.trim().slice(0, 40);
+      var id = channelSlug(name);
+      if (!id) { showNotice("Enter a server name using letters or numbers."); return; }
+      if (servers.some(function (server) { return server.id === id; })) {
+        showNotice("That server already exists.");
+        return;
+      }
+      var server = { id: id, name: name, short: name.slice(0, 2).toUpperCase() };
+      server.tag = server.short;
+      var groups = [{ cat: "Text channels", items: [["general", "The place for everything and anything."]] }];
+      if (dbClient && currentUser) {
+        var result = await dbClient.from("chat_servers").insert({
+          id: id, name: name, short: server.short, created_by: currentUser.id
+        }).select("snowflake_id").single();
+        if (result.error) {
+          console.error("Could not create shared server.", result.error);
+          showNotice("Server was not created: " + result.error.message);
+          return;
+        }
+        server.snowflakeId = result.data.snowflake_id;
+        var channelResult = await dbClient.from("chat_channels")
+          .select("snowflake_id").eq("server_id", id).eq("name", "general").single();
+        if (channelResult.error) {
+          console.error("Could not load the new server's default channel ID.", channelResult.error);
+          showNotice("Server was created, but its default channel ID could not be loaded.");
+          return;
+        }
+        groups[0].items[0][2] = channelResult.data.snowflake_id;
+      } else {
+        try {
+          server.snowflakeId = await nextLocalSnowflakeId();
+          groups[0].items[0][2] = await nextLocalSnowflakeId();
+        } catch (error) {
+          console.error("Could not create Snowflake IDs for the server.", error);
+          showNotice("Server was not created because its IDs could not be generated.");
+          return;
+        }
+      }
+      servers.push(server);
+      channels[id] = groups;
+      customServers.push({ server: server, groups: groups });
+      isDMView = false;
+      cur.srv = id; cur.ch = "general";
+      persistState();
+      renderAll();
+      showNotice(name + " created");
+    };
+    rail.appendChild(add);
+  }
+
+  function renderDMFindButton(box) {
+    var button = el("button", "dm-find-button");
+    button.id = "dm-find-button";
+    button.type = "button";
+    button.setAttribute("aria-haspopup", "dialog");
+    button.setAttribute("aria-controls", "dm-finder");
+    button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><span>Find or start a conversation</span>';
+    button.onclick = openDMFinder;
+    box.appendChild(button);
+  }
+
+  function getDMFinderDestinations() {
+    var destinations = [];
+    servers.forEach(function (server) {
+      destinations.push({
+        kind: "server", id: server.id, snowflakeId: server.snowflakeId, name: server.name,
+        detail: "Server", icon: server.short || server.name.slice(0, 2).toUpperCase()
+      });
+      (channels[server.id] || []).forEach(function (group) {
+        group.items.forEach(function (item) {
+          destinations.push({
+            kind: "channel", id: server.id, channel: item[0], name: item[0],
+            snowflakeId: item[2],
+            detail: server.name + " · " + group.cat, icon: "#"
+          });
+        });
+      });
+    });
+    dmContacts.forEach(function (contact) {
+      destinations.push({
+        kind: "dm", id: contact.id, snowflakeId: contact.snowflakeId, name: contact.name,
+        detail: "@" + contact.handle + (contact.serverTag ? " · " + contact.serverTag : ""),
+        icon: contact.name.charAt(0).toUpperCase(), color: colors[contact.color] || colors[0]
+      });
+    });
+    dmGroups.forEach(function (group) {
+      destinations.push({
+        kind: "dm", id: group.id, snowflakeId: group.snowflakeId, name: group.name, detail: "Group message", icon: "✦"
+      });
+    });
+    return destinations;
+  }
+
+  function renderDMFinderResults(query) {
+    var results = $("dm-finder-results");
+    results.textContent = "";
+    var normalized = query.trim().toLowerCase();
+    var destinations = getDMFinderDestinations();
+    var channelsOnly = destinations.filter(function (item) { return item.kind === "channel"; });
+    channelsOnly.sort(function (a, b) {
+      var aCurrent = a.id === cur.srv && a.channel === cur.ch ? -1 : 0;
+      var bCurrent = b.id === cur.srv && b.channel === cur.ch ? -1 : 0;
+      return aCurrent - bCurrent;
+    });
+    function addSection(title, items) {
+      if (!items.length) return;
+      results.appendChild(el("div", "dm-finder-section", title));
+      items.slice(0, 20).forEach(function (item) {
+        var result = el("button", "dm-finder-result");
+        result.type = "button";
+        result.setAttribute("role", "option");
+        result.dataset.snowflakeId = item.snowflakeId || "";
+        var icon = el("span", "dm-finder-result-icon", item.icon);
+        if (item.color) icon.style.background = item.color;
+        var copy = el("div", "dm-finder-result-copy");
+        copy.appendChild(el("strong", null, item.name));
+        copy.appendChild(el("span", null, item.detail));
+        result.appendChild(icon);
+        result.appendChild(copy);
+        result.appendChild(el("span", "dm-finder-result-hint", item.kind === "dm" ? "Message" : "Open"));
+        result.onclick = function () {
+          if (item.kind === "dm") {
+            activeDM = item.id;
+            isDMView = true;
+            dmSection = "chat";
+          } else {
+            isDMView = false;
+            cur.srv = item.id;
+            if (item.kind === "channel") cur.ch = item.channel;
+            else {
+              var groups = channels[item.id] || [];
+              cur.ch = groups.length && groups[0].items.length ? groups[0].items[0][0] : "general";
+            }
+            persistState();
+          }
+          $("dm-finder").hidden = true;
+          renderAll();
+          app.classList.remove("open", "members-open", "profile-open");
+        };
+        results.appendChild(result);
+      });
+    }
+
+    if (normalized) {
+      var matches = destinations.filter(function (item) {
+        return (item.name + " " + item.detail).toLowerCase().indexOf(normalized) !== -1;
+      });
+      addSection("Search Results", matches);
+      if (!matches.length) results.appendChild(el("div", "dm-finder-empty", "No servers, channels or DMs matched."));
+      return;
+    }
+    addSection("Previous Channels", channelsOnly);
+    addSection("Direct Messages", destinations.filter(function (item) { return item.kind === "dm"; }));
+  }
+
+  function openDMFinder() {
+    $("dm-finder").hidden = false;
+    $("dm-finder-search").value = "";
+    renderDMFinderResults("");
+    $("dm-finder-search").focus();
+  }
+
+  function renderDMSectionTabs(box) {
+    var tabs = el("nav", "dm-tabs");
+    tabs.setAttribute("aria-label", "Direct message sections");
+    tabs.setAttribute("role", "tablist");
+    [
+      ["friends", "♙", "Friends List"],
+      ["shop", "✦", "Shop"],
+      ["quests", "⚑", "Quests"],
+      ["invites", "✉", "Server Invites"],
+      ["nitro", "◆", "Nitro"]
+    ].forEach(function (item) {
+      var tab = el("button", "dm-tab" + (dmSection === item[0] ? " on" : ""));
+      tab.type = "button";
+      tab.setAttribute("role", "tab");
+      tab.setAttribute("aria-selected", String(dmSection === item[0]));
+      tab.appendChild(el("span", "dm-tab-icon", item[1]));
+      tab.appendChild(el("span", "dm-tab-label", item[2]));
+      if (item[0] === "invites") {
+        var pendingCount = serverInvites.filter(function (invite) { return invite.status === "pending"; }).length;
+        if (pendingCount) tab.appendChild(el("span", "dm-tab-badge", String(pendingCount)));
+      }
+      tab.onclick = function () {
+        dmSection = item[0];
+        renderAll();
+        app.classList.remove("open");
+      };
+      tabs.appendChild(tab);
+    });
+    box.appendChild(tabs);
+  }
+
+  function renderDMFriends(box) {
+    box.appendChild(el("div", "cat", "Direct Messages"));
+    if (!dmContacts.length) box.appendChild(el("div", "dm-empty", "No other accounts yet"));
+    dmContacts.forEach(function (contact) {
+      var row = el("button", "dm-row" + (dmSection === "chat" && contact.id === activeDM ? " on" : ""));
+      row.type = "button";
+      row.dataset.dm = contact.id;
+      row.dataset.snowflakeId = contact.snowflakeId || "";
+      var avatar = el("div", "av dot" + (contact.status === "away" ? " away" : ""), contact.name.charAt(0));
+      avatar.style.background = colors[contact.color] || colors[0];
+      var copy = el("div", "dm-copy");
+      copy.appendChild(el("strong", null, contact.name));
+      var conversation = store["dm:" + contact.id] || [];
+      copy.appendChild(el("span", null, conversation.length ? conversation[conversation.length - 1].text : "@" + contact.handle));
+      row.appendChild(avatar);
+      row.appendChild(copy);
+      row.onclick = function () {
+        activeDM = contact.id;
+        dmSection = "chat";
+        renderAll();
+        app.classList.remove("open", "members-open", "profile-open");
+      };
+      box.appendChild(row);
+    });
+    if (dmGroups.length) {
+      box.appendChild(el("div", "cat", "Group Messages"));
+      dmGroups.forEach(function (group) {
+        var row = el("button", "dm-row" + (dmSection === "chat" && group.id === activeDM ? " on" : ""));
+        row.type = "button";
+        row.dataset.dm = group.id;
+        row.dataset.snowflakeId = group.snowflakeId || "";
+        row.appendChild(el("div", "av", "✦"));
+        var copy = el("div", "dm-copy");
+        copy.appendChild(el("strong", null, group.name));
+        var conversation = store[group.id] || [];
+        copy.appendChild(el("span", null, conversation.length ? conversation[conversation.length - 1].text : "Group conversation"));
+        row.appendChild(copy);
+        row.onclick = function () {
+          activeDM = group.id;
+          dmSection = "chat";
+          renderAll();
+          app.classList.remove("open", "members-open", "profile-open");
+        };
+        box.appendChild(row);
+      });
+    }
+  }
+
+  function renderDMFriendsPage(box) {
+    var page = el("section", "dm-page");
+    page.appendChild(el("p", "dm-page-intro", "See who's around and jump into a conversation."));
+    var subtabs = el("div", "dm-subtabs");
+    [["all", "All"], ["online", "Online"]].forEach(function (filter) {
+      var button = el("button", "dm-subtab" + (friendListFilter === filter[0] ? " on" : ""), filter[1]);
+      button.type = "button";
+      button.setAttribute("aria-pressed", String(friendListFilter === filter[0]));
+      button.onclick = function () {
+        friendListFilter = filter[0];
+        renderAll();
+      };
+      subtabs.appendChild(button);
+    });
+    page.appendChild(subtabs);
+    var grid = el("div", "friends-grid");
+    var visibleContacts = dmContacts.filter(function (contact) {
+      return friendListFilter !== "online" || contact.status !== "off";
+    });
+    if (!visibleContacts.length) grid.appendChild(el("div", "dm-empty", "No friends to show yet."));
+    visibleContacts.forEach(function (contact) {
+      var card = el("article", "dm-item-card");
+      var avatar = el("div", "av dot" + (contact.status === "away" ? " away" : ""), contact.name.charAt(0));
+      avatar.style.background = colors[contact.color] || colors[0];
+      var copy = el("div", "dm-copy");
+      copy.appendChild(el("strong", null, contact.name));
+      copy.appendChild(el("span", null, "@" + contact.handle + " · " +
+        (contact.status === "away" ? "Idle" : contact.status === "off" ? "Offline" : "Online")));
+      var message = el("button", "dm-item-action", "Message");
+      message.type = "button";
+      message.setAttribute("aria-label", "Message " + contact.name);
+      message.onclick = function () {
+        activeDM = contact.id;
+        dmSection = "chat";
+        renderAll();
+      };
+      card.appendChild(avatar);
+      card.appendChild(copy);
+      card.appendChild(message);
+      grid.appendChild(card);
+    });
+    page.appendChild(grid);
+    box.appendChild(page);
+  }
+
+  function renderDMShop(box) {
+    var page = el("section", "dm-page");
+    page.appendChild(el("p", "dm-page-intro", "Personalize your profile and show off your spark."));
+    var items = [
+      ["✦", "Starfall profile effect", "A little extra glow for your profile.", "300 Sparks"],
+      ["🔥", "Ember nameplate", "Bring a warm accent to your name.", "500 Sparks"],
+      ["◈", "Aurora avatar frame", "A shifting frame inspired by the night sky.", "750 Sparks"]
+    ];
+    var grid = el("div", "shop-grid");
+    items.forEach(function (item) {
+      var card = el("article", "shop-card");
+      card.appendChild(el("div", "shop-art", item[0]));
+      card.appendChild(el("h3", null, item[1]));
+      card.appendChild(el("p", null, item[2]));
+      var footer = el("div", "dm-quest-foot");
+      footer.appendChild(el("span", "dm-shop-balance", item[3]));
+      var preview = el("button", null, "Preview");
+      preview.type = "button";
+      preview.onclick = function () { showNotice("Shop previews are coming soon."); };
+      footer.appendChild(preview);
+      card.appendChild(footer);
+      grid.appendChild(card);
+    });
+    page.appendChild(grid);
+    box.appendChild(page);
+  }
+
+  function renderDMQuests(box) {
+    var authoredMessages = 0;
+    Object.keys(store).forEach(function (key) {
+      authoredMessages += (store[key] || []).filter(function (message) {
+        return message.senderId === "local-user" || currentUser && message.senderId === currentUser.id ||
+          message.who === "you" || message.who === userProfile.name;
+      }).length;
+    });
+    var quests = [
+      { id: "send-five-messages", title: "Break the ice", description: "Send 5 messages in a conversation.", progress: Math.min(authoredMessages, 5), target: 5, reward: 50 },
+      { id: "start-group-chat", title: "Bring everyone together", description: "Start a group DM with your friends.", progress: Math.min(dmGroups.length, 1), target: 1, reward: 75 },
+      { id: "explore-servers", title: "Explore NovaFlames", description: "Visit 3 community servers.", progress: Math.min(servers.length, 3), target: 3, reward: 50 }
+    ];
+    var page = el("section", "dm-page");
+    page.appendChild(el("p", "dm-page-intro", "Complete quests to earn Sparks and explore the community."));
+    var balance = el("div", "dm-page-toolbar");
+    balance.appendChild(el("strong", null, "Your Sparks"));
+    balance.appendChild(el("span", "dm-shop-balance", "✦ " + sparkBalance));
+    page.appendChild(balance);
+    var grid = el("div", "quest-grid");
+    quests.forEach(function (quest) {
+      var card = el("article", "quest-card");
+      var top = el("div", "dm-quest-top");
+      top.appendChild(el("h3", null, quest.title));
+      top.appendChild(el("span", "dm-quest-reward", "✦ " + quest.reward));
+      card.appendChild(top);
+      card.appendChild(el("p", "dm-quest-copy", quest.description));
+      var progress = el("div", "dm-progress");
+      var fill = el("i");
+      fill.style.width = Math.round(quest.progress / quest.target * 100) + "%";
+      progress.appendChild(fill);
+      card.appendChild(progress);
+      var footer = el("div", "dm-quest-foot");
+      footer.appendChild(el("span", null, quest.progress + " / " + quest.target));
+      var claimed = claimedQuests.indexOf(quest.id) !== -1;
+      var claim = el("button", null, claimed ? "Claimed" : quest.progress >= quest.target ? "Claim reward" : "In progress");
+      claim.type = "button";
+      claim.disabled = claimed || quest.progress < quest.target;
+      claim.onclick = function () {
+        if (claimedQuests.indexOf(quest.id) !== -1 || quest.progress < quest.target) return;
+        claimedQuests.push(quest.id);
+        sparkBalance += quest.reward;
+        persistState();
+        renderAll();
+        showNotice("Quest complete! +" + quest.reward + " Sparks");
+      };
+      footer.appendChild(claim);
+      card.appendChild(footer);
+      grid.appendChild(card);
+    });
+    page.appendChild(grid);
+    box.appendChild(page);
+  }
+
+  function renderDMNitro(box) {
+    var page = el("section", "dm-page");
+    page.appendChild(el("p", "dm-page-intro", "A little more room to make your community feel like yours."));
+    var hero = el("article", "nitro-hero");
+    hero.appendChild(el("div", "nitro-mark", "◆"));
+    hero.appendChild(el("h3", null, "Make more of your NovaFlames"));
+    hero.appendChild(el("p", null, "Nitro is a preview of optional membership perks for your profile and communities. Subscription checkout is not connected yet."));
+    var perks = el("div", "nitro-perks");
+    ["Animated profile effects", "More profile customization", "Community perks"].forEach(function (perk) {
+      perks.appendChild(el("span", null, "✦  " + perk));
+    });
+    hero.appendChild(perks);
+    var action = el("button", "nitro-cta", "Explore Nitro");
+    action.type = "button";
+    action.onclick = function () { showNotice("Nitro subscriptions are not available yet."); };
+    hero.appendChild(action);
+    page.appendChild(hero);
+    box.appendChild(page);
+  }
+
+  function renderDMSectionPage(box) {
+    if (dmSection === "friends") renderDMFriendsPage(box);
+    else if (dmSection === "shop") renderDMShop(box);
+    else if (dmSection === "quests") renderDMQuests(box);
+    else if (dmSection === "invites") renderDMInvites(box);
+    else if (dmSection === "nitro") renderDMNitro(box);
+  }
+
+  async function createTestInvite() {
+    var name = "Starlight Harbor";
+    var id = channelSlug(name);
+    var suffix = 2;
+    while (channels[id]) {
+      name = "Starlight Harbor " + suffix;
+      id = channelSlug(name);
+      suffix += 1;
+    }
+    var inviter = dmContacts.filter(function (contact) { return contact.id === "Jules"; })[0] || dmContacts[0];
+    var snowflakeId, serverSnowflakeId, channelSnowflakeId;
+    try {
+      snowflakeId = await nextLocalSnowflakeId();
+      serverSnowflakeId = await nextLocalSnowflakeId();
+      channelSnowflakeId = await nextLocalSnowflakeId();
+    } catch (error) {
+      console.error("Could not create Snowflake IDs for the test invite.", error);
+      showNotice("Invite was not created because its IDs could not be generated.");
+      return;
+    }
+    serverInvites.unshift({
+      id: "test-invite-" + snowflakeId,
+      snowflakeId: snowflakeId,
+      serverId: id,
+      serverSnowflakeId: serverSnowflakeId,
+      channelSnowflakeId: channelSnowflakeId,
+      serverName: name,
+      inviterId: inviter && inviter.id || "test-friend",
+      inviterSnowflakeId: inviter && inviter.snowflakeId,
+      inviterName: inviter && inviter.name || "A friend",
+      inviterHandle: inviter && inviter.handle || "",
+      status: "pending",
+      createdAt: new Date().toISOString()
+    });
+    persistState();
+    renderChans();
+    showNotice((inviter && inviter.name || "A friend") + " invited you to " + name);
+  }
+
+  async function respondToServerInvite(invite, response) {
+    if (TEST_MODE) {
+      invite.status = response;
+      if (response === "accepted" && !channels[invite.serverId]) {
+        var server = {
+          id: invite.serverId,
+          name: invite.serverName,
+          short: invite.serverName.slice(0, 2).toUpperCase(),
+          snowflakeId: invite.serverSnowflakeId
+        };
+        server.tag = server.short;
+        var groups = [{
+          cat: "Text channels",
+          items: [["general", "The place for everything and anything.", invite.channelSnowflakeId]]
+        }];
+        servers.push(server);
+        channels[server.id] = groups;
+        customServers.push({ server: server, groups: groups });
+      }
+      persistState();
+    } else {
+      if (!dbClient || !currentUser) { showNotice("Sign in to respond to server invites."); return; }
+      var result;
+      try {
+        result = await dbClient.from("server_invites").update({ status: response })
+          .eq("id", invite.id).eq("invitee_id", currentUser.id).eq("status", "pending");
+      } catch (error) {
+        console.error("Could not respond to server invite.", error);
+        showNotice("Invite response failed: " + (error.message || "Check your connection."));
+        return;
+      }
+      if (result.error) {
+        console.error("Could not respond to server invite.", result.error);
+        showNotice("Invite response failed: " + result.error.message);
+        return;
+      }
+      serverInvites = serverInvites.filter(function (item) { return item.id !== invite.id; });
+      if (response === "accepted") await loadCommunityStructure();
+    }
+    renderAll();
+    if (response === "accepted") {
+      isDMView = false;
+      cur.srv = invite.serverId;
+      cur.ch = channels[cur.srv] && channels[cur.srv][0].items[0][0] || "general";
+      renderAll();
+      showNotice("Joined " + invite.serverName);
+    } else showNotice("Invite to " + invite.serverName + " declined");
+  }
+
+  function renderDMInvites(box) {
+    var page = el("section", "dm-page");
+    page.appendChild(el("p", "dm-page-intro", "Invites from friends and communities will appear here."));
+    if (TEST_MODE) {
+      var simulate = el("button", "dm-demo-action", "＋  Simulate an incoming invite");
+      simulate.type = "button";
+      simulate.onclick = createTestInvite;
+      page.appendChild(simulate);
+    }
+    var pending = serverInvites.filter(function (invite) { return invite.status === "pending"; });
+    if (!pending.length) page.appendChild(el("div", "dm-empty", "No pending server invites."));
+    pending.forEach(function (invite) {
+      var card = el("article", "dm-item-card dm-invite-card");
+      card.dataset.snowflakeId = invite.snowflakeId || "";
+      var head = el("div", "dm-invite-head");
+      var avatar = el("div", "av", invite.inviterName.charAt(0).toUpperCase());
+      avatar.style.background = colors[1];
+      var copy = el("div", "dm-invite-copy");
+      copy.appendChild(el("strong", null, invite.serverName));
+      copy.appendChild(el("span", null, invite.inviterName + " invited you"));
+      head.appendChild(avatar);
+      head.appendChild(copy);
+      card.appendChild(head);
+      var date = invite.createdAt ? new Date(invite.createdAt) : null;
+      card.appendChild(el("div", "dm-invite-meta", date && !isNaN(date.getTime()) ? date.toLocaleDateString() : "Just now"));
+      var actions = el("div", "dm-invite-actions");
+      var decline = el("button", "dm-secondary-action", "Decline");
+      decline.type = "button";
+      decline.onclick = function () { respondToServerInvite(invite, "declined"); };
+      var accept = el("button", "dm-item-action", "Accept");
+      accept.type = "button";
+      accept.onclick = function () { respondToServerInvite(invite, "accepted"); };
+      actions.appendChild(decline);
+      actions.appendChild(accept);
+      card.appendChild(actions);
+      page.appendChild(card);
+    });
+    box.appendChild(page);
+  }
+
+  async function inviteUserToServer() {
+    var username = window.prompt("Enter the username to invite:");
+    if (username === null) return;
+    username = username.trim().replace(/^@/, "").toLowerCase();
+    if (!/^[a-z0-9_-]{3,24}$/.test(username)) { showNotice("Enter a valid username."); return; }
+    if (!dbClient || !currentUser) { showNotice("Sign in to invite someone to a server."); return; }
+    var profileResult;
+    try {
+      profileResult = await dbClient.from("profiles").select("id,snowflake_id,display_name,username")
+        .eq("username", username).maybeSingle();
+    } catch (error) {
+      console.error("Could not find the invite recipient.", error);
+      showNotice("Could not look up that user: " + (error.message || "Check your connection."));
+      return;
+    }
+    if (profileResult.error) {
+      console.error("Could not find the invite recipient.", profileResult.error);
+      showNotice("Could not look up that user: " + profileResult.error.message);
+      return;
+    }
+    if (!profileResult.data) { showNotice("No NovaFlames user found with that username."); return; }
+    if (profileResult.data.id === currentUser.id) { showNotice("You cannot invite yourself."); return; }
+    var inviteResult;
+    try {
+      inviteResult = await dbClient.from("server_invites").insert({
+        server_id: cur.srv,
+        inviter_id: currentUser.id,
+        invitee_id: profileResult.data.id,
+        status: "pending"
+      }).select("snowflake_id").single();
+    } catch (error) {
+      console.error("Could not send server invite.", error);
+      showNotice("Invite was not sent: " + (error.message || "Check your connection."));
+      return;
+    }
+    if (inviteResult.error) {
+      console.error("Could not send server invite.", inviteResult.error);
+      showNotice("Invite was not sent: " + inviteResult.error.message);
+      return;
+    }
+    showNotice("Invite sent to " + profileResult.data.display_name);
+  }
+
+  function renderChans() {
+    var box = $("chans"); box.textContent = "";
+    $("side").classList.toggle("dm-side", isDMView);
+    $("add-channel").hidden = isDMView;
+    $("invite-server").hidden = isDMView || TEST_MODE;
+    if (isDMView) {
+      $("srv-name").textContent = "Direct Messages";
+      renderDMFindButton(box);
+      renderDMSectionTabs(box);
+      renderDMFriends(box);
+      return;
+    }
+    var s = servers.filter(function (x) { return x.id === cur.srv; })[0];
+    $("srv-name").textContent = s.name;
+    channels[cur.srv].forEach(function (g) {
+      box.appendChild(el("div", "cat", g.cat));
+      g.items.forEach(function (it) {
+        var b = el("button", "ch" + (it[0] === cur.ch ? " on" : ""));
+        b.dataset.snowflakeId = it[2] || "";
+        b.appendChild(el("b", null, "#"));
+        b.appendChild(el("span", null, it[0]));
+        b.onclick = function () { isDMView = false; cur.ch = it[0]; renderAll(); app.classList.remove("open"); };
+        box.appendChild(b);
+      });
+    });
+  }
+
+  function topicFor() {
+    var out = "";
+    channels[cur.srv].forEach(function (g) { g.items.forEach(function (it) { if (it[0] === cur.ch) out = it[1]; }); });
+    return out;
+  }
+
+  function renderFeed() {
+    var title = $("ch-name");
+    var feed = $("feed"); feed.textContent = "";
+    if (isDMView && dmSection !== "chat") {
+      var sectionTitles = {
+        friends: "Friends List", shop: "Shop", quests: "Quests", invites: "Server Invites", nitro: "Nitro"
+      };
+      $("chat-symbol").textContent = "";
+      title.textContent = sectionTitles[dmSection] || "Direct Messages";
+      $("ch-topic").textContent = "";
+      $("input").disabled = true;
+      $("send").disabled = true;
+      var banner = el("header", "dm-section-banner");
+      banner.appendChild(el("h1", null, sectionTitles[dmSection] || "Direct Messages"));
+      feed.appendChild(banner);
+      renderDMSectionPage(feed);
+      return;
+    }
+    var messageKey;
+    if (isDMView) {
+      var contact = contactFor(activeDM);
+      $("chat-symbol").textContent = "✦";
+      title.textContent = contact.name;
+      $("ch-topic").textContent = !contact.id ? "Private conversations" :
+        contact.group ? "Group message · " + contact.participants.length + " members : " + contact.participants.map(function (id) { return contactFor(id).name; }).join(", ")
+          : "Direct message · @" + contact.handle;
+      $("input").placeholder = !contact.id ? "Select someone to chat" :
+        contact.group ? "Message group" : "Message @" + contact.handle;
+      $("input").disabled = !contact.id;
+      $("send").disabled = !contact.id || !input.value.trim();
+      messageKey = activeMessageKey();
+      var welcome = el("div", "dm-welcome");
+      welcome.appendChild(el("div", "dm-welcome-icon", contact.name.charAt(0)));
+      welcome.appendChild(el("h2", null, contact.id
+        ? (contact.group ? "Group conversation" : "Conversation with " + contact.name)
+        : "Your NovaFlames conversations"));
+      welcome.appendChild(el("p", null, contact.id
+        ? TEST_MODE ? "Test mode: this conversation is saved in this browser."
+          : "Your messages here are private between the two of you."
+        : "Create another account to start a private conversation."));
+      feed.appendChild(welcome);
+    } else {
+      $("chat-symbol").textContent = "#";
+      title.textContent = cur.ch;
+      $("ch-topic").textContent = topicFor();
+      $("input").placeholder = "Message #" + cur.ch;
+      $("input").disabled = false;
+      messageKey = activeMessageKey();
+    }
+    feed.appendChild(el("div", "day", "Today"));
+    var list = store[messageKey] || [];
+    var prev = null;
+    list.forEach(function (m) {
+      var identity = m.senderId || m.who;
+      var row = el("div", "msg" + (identity !== prev ? " first" : ""));
+      row.dataset.snowflakeId = m.snowflakeId || "";
+      row.dataset.senderSnowflakeId = m.senderSnowflakeId ||
+        (m.senderId === "local-user" ? userProfile.userId : "");
+      var g = el("div", "gutter");
+      if (identity !== prev) {
+        var a = el("div", "av", m.who.charAt(0).toUpperCase());
+        a.style.background = (currentUser && m.senderId === currentUser.id) ||
+          m.senderId === "local-user" || m.who === "you" || m.who === userProfile.name
+          ? "linear-gradient(160deg,#ffd76a,#ff9a3c)" : colorFor(m.who);
+        g.appendChild(a);
+      }
+      row.appendChild(g);
+      var body = el("div", "body");
+      if (identity !== prev) {
+        var w = el("div", "who");
+        w.appendChild(el("strong", null, m.who));
+        w.appendChild(el("time", null, m.t));
+        body.appendChild(w);
+      }
+      body.appendChild(el("p", null, m.text));
+      row.appendChild(body);
+      feed.appendChild(row);
+      prev = identity;
+    });
+    feed.scrollTop = feed.scrollHeight;
+  }
+
+  function renderMembers() {
+    var box = $("members"); box.textContent = "";
+    [["on", "Online"], ["away", "Away"], ["off", "Offline"]].forEach(function (grp) {
+      var rows = people.filter(function (p) { return p.s === grp[0]; });
+      if (!rows.length) return;
+      box.appendChild(el("div", "cat", grp[1] + " - " + rows.length));
+      rows.forEach(function (p) {
+        var r = el("div", "mem");
+        var a = el("div", "av sm" + (p.s === "off" ? "" : " dot" + (p.s === "away" ? " away" : "")), p.n.charAt(0));
+        a.style.background = colors[p.c];
+        if (p.s === "off") a.style.opacity = ".5";
+        r.appendChild(a);
+        r.dataset.snowflakeId = p.snowflakeId || "";
+        r.appendChild(el("span", null, p.n));
+        box.appendChild(r);
+      });
+    });
+  }
+
+  function renderAll() {
+    app.classList.toggle("dm-view", isDMView);
+    app.classList.toggle("dm-section-view", isDMView && dmSection !== "chat");
+    if (!isDMView) $("search").parentElement.classList.remove("search-active");
+    renderProfile();
+    renderRail();
+    renderChans();
+    renderFeed();
+    renderMembers();
+    renderDMProfile();
+    renderFriendsRail();
+    app.classList.toggle("profile-hidden", isDMView && dmSection === "chat" && !dmProfileVisible);
+    app.classList.toggle("profile-open", isDMView && dmSection === "chat" && dmProfileVisible);
+    $("members-toggle").hidden = isDMView;
+    $("dm-profile-toggle").hidden = !isDMView || dmSection !== "chat";
+    $("pinned-toggle").hidden = !isDMView || dmSection !== "chat";
+    $("add-dm").hidden = !isDMView || dmSection !== "chat";
+    $("video-call").hidden = !isDMView || dmSection !== "chat";
+    $("voice-call").hidden = !isDMView || dmSection !== "chat";
+    $("dm-profile-toggle").setAttribute("aria-label", dmProfileVisible ? "Hide user profile" : "Show user profile");
+    $("dm-profile-toggle").title = dmProfileVisible ? "Hide user profile" : "Show user profile";
+    filterMessages();
+    if (currentUser && (!isDMView || dmSection === "chat")) loadCurrentMessages();
+  }
+
+  function filterMessages() {
+    var query = $("search").value.trim().toLowerCase();
+    document.querySelectorAll(".msg").forEach(function (message) {
+      message.hidden = query.length > 0 && message.textContent.toLowerCase().indexOf(query) === -1;
+    });
+  }
+
+  var input = $("input"), send = $("send");
+  function fit() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 120) + "px"; }
+  input.addEventListener("input", function () { send.disabled = !input.value.trim(); fit(); });
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("form").requestSubmit(); }
+  });
+  $("form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var text = input.value.trim();
+    if (!text) return;
+    if (TEST_MODE && !currentUser) {
+      if (isDMView && !contactFor(activeDM).id) {
+        showNotice("Choose someone from the direct-message list first.");
+        return;
+      }
+      var testKey = activeMessageKey();
+      var now = new Date();
+      var testMessageId;
+      try {
+        testMessageId = await nextLocalSnowflakeId();
+      } catch (error) {
+        console.error("Could not create a Snowflake ID for the message.", error);
+        showNotice("Message was not sent because its ID could not be generated.");
+        return;
+      }
+      (store[testKey] = store[testKey] || []).push({
+        who: userProfile.name,
+        senderId: "local-user",
+        senderSnowflakeId: userProfile.userId,
+        snowflakeId: testMessageId,
+        text: text,
+        t: now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+      });
+      input.value = "";
+      send.disabled = true;
+      fit();
+      persistState();
+      renderAll();
+      return;
+    }
+    if (!dbClient || !currentUser) { showNotice("Sign in before sending messages."); return; }
+    var message = isDMView
+      ? { kind: "dm", sender_id: currentUser.id, recipient_id: contactFor(activeDM).id, content: text }
+      : { kind: "channel", server_id: cur.srv, channel_name: cur.ch, sender_id: currentUser.id, content: text };
+    if (isDMView && !message.recipient_id) {
+      showNotice("Choose someone from the direct-message list first.");
+      return;
+    }
+    send.disabled = true;
+    try {
+      var result = await dbClient.from("messages").insert(message).select("snowflake_id").single();
+      if (result.error) throw result.error;
+      if (input.value.trim() === text) input.value = "";
+      fit();
+      send.disabled = !input.value.trim();
+      await loadCurrentMessages();
+    } catch (error) {
+      console.error("Could not send shared message.", error);
+      showNotice("Message was not sent: " + error.message);
+      send.disabled = !input.value.trim();
+    }
+  });
+  $("dm-profile-toggle").onclick = function () {
+    dmProfileVisible = !dmProfileVisible;
+    renderAll();
+  };
+  $("add-dm").onclick = async function () {
+    var entered = window.prompt("Add people by username or name, separated by commas:", "");
+    if (entered === null) return;
+    var names = entered.split(",").map(function (name) { return name.trim().replace(/^@/, "").toLowerCase(); })
+      .filter(Boolean);
+    var participants = [];
+    names.forEach(function (name) {
+      var contact = dmContacts.filter(function (candidate) {
+        return candidate.handle.toLowerCase() === name || candidate.name.toLowerCase() === name;
+      })[0];
+      if (contact && participants.indexOf(contact.id) === -1) participants.push(contact.id);
+    });
+    if (!participants.length) {
+      showNotice("Enter at least one valid username from the Direct Messages list.");
+      return;
+    }
+    participants.sort();
+    var groupId = "group:" + participants.join("|");
+    var group = dmGroups.filter(function (item) { return item.id === groupId; })[0];
+    if (!group) {
+      var groupSnowflakeId;
+      try {
+        groupSnowflakeId = await nextLocalSnowflakeId();
+      } catch (error) {
+        console.error("Could not create a Snowflake ID for the group DM.", error);
+        showNotice("Group DM was not created because its ID could not be generated.");
+        return;
+      }
+      group = {
+        id: groupId,
+        snowflakeId: groupSnowflakeId,
+        name: participants.map(function (id) { return contactFor(id).name; }).join(", "),
+        participants: participants,
+        group: true,
+        color: 2,
+        status: "on"
+      };
+      dmGroups.push(group);
+    }
+    activeDM = group.id;
+    isDMView = true;
+    persistState();
+    renderAll();
+    showNotice("Group DM ready");
+  };
+  $("pinned-toggle").onclick = function () {
+    showNotice("There are no pinned messages in this conversation yet.");
+  };
+  $("video-call").onclick = function () { showNotice("Video calls are not available in test mode yet."); };
+  $("voice-call").onclick = function () { showNotice("Voice calls are not available in test mode yet."); };
+  $("profile-custom-status").onclick = function () {
+    var status = window.prompt("Set a custom status (leave blank to clear it):", userProfile.customStatus || "");
+    if (status === null) return;
+    userProfile.customStatus = status.trim().slice(0, 80);
+    persistState();
+    renderProfile();
+  };
+  $("profile-pronouns").addEventListener("change", function () {
+    userProfile.pronouns = this.value;
+    persistState();
+    renderProfile();
+  });
+  $("profile-server-tag").addEventListener("change", function () {
+    userProfile.serverTag = this.value;
+    persistState();
+    renderProfile();
+    showNotice(this.value ? "Server tag updated" : "Server tag removed");
+  });
+  $("invite-server").onclick = inviteUserToServer;
+  $("auth-switch").onclick = function () { setAuthMode(authMode === "signin" ? "signup" : "signin"); };
+  $("auth-form").addEventListener("submit", async function (event) {
+    event.preventDefault();
+    showAuthError("");
+    if (!dbClient) {
+      showAuthError("Supabase is not configured. Add the project URL and publishable key first.");
+      return;
+    }
+    var email = $("auth-email").value.trim();
+    var password = $("auth-password").value;
+    var button = $("auth-submit");
+    button.disabled = true;
+    try {
+      var result;
+      if (authMode === "signup") {
+        var username = $("auth-username").value.trim().toLowerCase();
+        var displayName = $("auth-name").value.trim();
+        if (!/^[a-z0-9_-]{3,24}$/.test(username)) throw new Error("Username must be 3-24 letters, numbers, underscores, or hyphens.");
+        if (!displayName) throw new Error("Enter a display name.");
+        result = await dbClient.auth.signUp({
+          email: email,
+          password: password,
+          options: { data: { display_name: displayName.slice(0, 32), username: username } }
+        });
+      } else {
+        result = await dbClient.auth.signInWithPassword({ email: email, password: password });
+      }
+      if (result.error) throw result.error;
+      if (result.data.session) {
+        await activateSession(result.data.session.user);
+      } else {
+        showAuthError("Account created. Check your email to confirm the address, then sign in.");
+      }
+    } catch (error) {
+      console.error("Authentication failed.", error);
+      showAuthError(error.message || "Authentication failed. Try again.");
+    } finally {
+      button.disabled = false;
+    }
+  });
+  $("menu").onclick = function () { app.classList.add("open"); };
+  $("scrim").onclick = function () { app.classList.remove("open", "members-open", "profile-open"); };
+  $("members-toggle").onclick = function () {
+    if (window.innerWidth <= 700) app.classList.toggle("members-open");
+  };
+  $("search").addEventListener("input", filterMessages);
+  $("search-open").onclick = function () {
+    $("search").parentElement.classList.toggle("search-active");
+    if ($("search").parentElement.classList.contains("search-active")) $("search").focus();
+    else $("search").blur();
+  };
+  $("add-channel").onclick = async function () {
+    var enteredName = window.prompt("What should this channel be called?");
+    if (enteredName === null) return;
+    var name = channelSlug(enteredName);
+    if (!name) { showNotice("Enter a channel name using letters or numbers."); return; }
+    var groups = channels[cur.srv];
+    if (groups.some(function (group) { return group.items.some(function (channel) { return channel[0] === name; }); })) {
+      showNotice("That channel already exists.");
+      return;
+    }
+    var textGroup = groups.filter(function (group) { return group.cat === "Text channels"; })[0];
+    if (!textGroup) { textGroup = { cat: "Text channels", items: [] }; groups.push(textGroup); }
+    var topic = "A new place for the community to chat.";
+    var channelSnowflakeId;
+    if (dbClient && currentUser) {
+      var result = await dbClient.from("chat_channels").insert({
+        server_id: cur.srv, name: name, topic: topic, created_by: currentUser.id
+      }).select("snowflake_id").single();
+      if (result.error) {
+        console.error("Could not create shared channel.", result.error);
+        showNotice("Channel was not created: " + result.error.message);
+        return;
+      }
+      channelSnowflakeId = result.data.snowflake_id;
+    } else {
+      try {
+        channelSnowflakeId = await nextLocalSnowflakeId();
+      } catch (error) {
+        console.error("Could not create a Snowflake ID for the channel.", error);
+        showNotice("Channel was not created because its ID could not be generated.");
+        return;
+      }
+    }
+    textGroup.items.push([name, topic, channelSnowflakeId]);
+    if (!customChannels[cur.srv]) customChannels[cur.srv] = [];
+    customChannels[cur.srv].push({ name: name, topic: topic, snowflakeId: channelSnowflakeId });
+    isDMView = false;
+    cur.ch = name;
+    persistState();
+    renderAll();
+    showNotice("#" + name + " created");
+  };
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "/" && document.activeElement !== input && document.activeElement !== $("search")) {
+      event.preventDefault();
+      $("search").focus();
+    }
+    if (event.key === "Escape") {
+      if (!$("settings-screen").hidden) {
+        closeSettings();
+        return;
+      }
+      if (!$("dm-finder").hidden) {
+        $("dm-finder").hidden = true;
+        var finderButton = $("dm-find-button");
+        if (finderButton) finderButton.focus();
+      }
+      app.classList.remove("open", "members-open", "profile-open");
+      $("search").parentElement.classList.remove("search-active");
+    }
+  });
+  $("dm-finder-search").addEventListener("input", function () {
+    renderDMFinderResults(this.value);
+  });
+  $("dm-finder").addEventListener("click", function (event) {
+    if (event.target === this) this.hidden = true;
+  });
+  $("settings-screen").addEventListener("click", function (event) {
+    if (event.target === this) closeSettings();
+  });
+  $("settings-close").onclick = closeSettings;
+  $("settings-search").addEventListener("input", function () {
+    var query = this.value.trim().toLowerCase();
+    document.querySelectorAll(".settings-nav-group").forEach(function (group) {
+      var visibleCount = 0;
+      group.querySelectorAll(".settings-nav-item:not(.settings-submenu-item)").forEach(function (item) {
+        var matches = !query || item.textContent.toLowerCase().indexOf(query) !== -1;
+        var submenuId = settingsSubmenus[item.dataset.settingsToggle];
+        if (submenuId) {
+          var submenu = $(submenuId);
+          var childMatches = false;
+          submenu.querySelectorAll(".settings-submenu-item").forEach(function (child) {
+            var childMatchesQuery = !query || matches || child.textContent.toLowerCase().indexOf(query) !== -1;
+            child.hidden = !childMatchesQuery;
+            if (query && childMatchesQuery && (!matches || child.textContent.toLowerCase().indexOf(query) !== -1)) {
+              childMatches = true;
+            }
+          });
+          item.hidden = !matches && !childMatches;
+          submenu.hidden = item.hidden || (query
+            ? !matches && !childMatches
+            : item.getAttribute("aria-expanded") !== "true");
+        } else {
+          item.hidden = !matches;
+        }
+        if (!item.hidden) visibleCount += 1;
+      });
+      group.hidden = visibleCount === 0;
+    });
+  });
+  $("settings-nav-list").addEventListener("click", function (event) {
+    var item = event.target.closest(".settings-nav-item");
+    if (!item) return;
+    if (item.dataset.settingsAction === "logout") {
+      logOutFromSettings().catch(function (error) {
+        console.error("Could not sign out.", error);
+        showNotice("Log out failed: " + (error.message || "Unknown error"));
+      });
+      return;
+    }
+    if (item.dataset.settingsPage) {
+      renderSettingsPage(firstSettingsSubpage[item.dataset.settingsToggle] || item.dataset.settingsPage);
+    }
+  });
+  $("profile-button").onclick = function () {
+    var card = $("profile-card");
+    card.hidden = !card.hidden;
+    this.setAttribute("aria-expanded", String(!card.hidden));
+  };
+  $("profile-settings").onclick = function () {
+    openSettings();
+  };
+  $("profile-card").addEventListener("click", async function (event) {
+    var statusChoice = event.target.closest("[data-status-value]");
+    if (statusChoice) {
+      userProfile.status = statusChoice.dataset.statusValue;
+      $("profile-status-options").hidden = true;
+      $("profile-card").querySelector('[data-profile-action="status"]').setAttribute("aria-expanded", "false");
+      persistState();
+      renderProfile();
+      return;
+    }
+    var button = event.target.closest("[data-profile-action]");
+    if (!button) return;
+    var action = button.dataset.profileAction;
+    if (action === "edit") {
+      var name = window.prompt("What name should people see?", userProfile.name);
+      if (name === null) return;
+      name = name.trim().slice(0, 32);
+      if (!name) { showNotice("Your display name cannot be empty."); return; }
+      var handle = window.prompt("Choose a username.", userProfile.handle);
+      if (handle === null) return;
+      handle = handle.toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 24);
+      if (!/^[a-z0-9_-]{3,24}$/.test(handle)) {
+        showNotice("Username must be 3-24 letters, numbers, underscores, or hyphens.");
+        return;
+      }
+      var previousName = userProfile.name;
+      var previousHandle = userProfile.handle;
+      userProfile.name = name;
+      userProfile.handle = handle;
+      if (dbClient && currentUser) {
+        var updateResult = await dbClient.from("profiles")
+          .update({ display_name: name, username: handle }).eq("id", currentUser.id);
+        if (updateResult.error) {
+          userProfile.name = previousName;
+          userProfile.handle = previousHandle;
+          renderProfile();
+          console.error("Could not update account profile.", updateResult.error);
+          showNotice("Profile was not updated: " + updateResult.error.message);
+          return;
+        }
+        await loadAccountData(currentUser);
+        renderAll();
+      } else persistState();
+      renderProfile();
+      showNotice("Profile updated");
+    } else if (action === "status") {
+      var options = $("profile-status-options");
+      options.hidden = !options.hidden;
+      button.setAttribute("aria-expanded", String(!options.hidden));
+    } else if (action === "copy") {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(userProfile.userId).then(function () {
+          showNotice("User ID copied");
+        }, function (error) {
+          console.error("Could not copy user ID.", error);
+          window.prompt("Copy your user ID:", userProfile.userId);
+        });
+      } else {
+        window.prompt("Copy your user ID:", userProfile.userId);
+      }
+    } else if (action === "switch") {
+      if (!dbClient) return;
+      var signOutResult = await dbClient.auth.signOut();
+      if (signOutResult.error) {
+        console.error("Could not sign out.", signOutResult.error);
+        showNotice("Sign out failed: " + signOutResult.error.message);
+      }
+    } else {
+      showNotice(action === "badges" ? "Your NovaFlames member badge is active." :
+        action === "activity" ? "You are hanging out in NovaFlames." : "NovaFlames member.");
+    }
+  });
+  document.addEventListener("click", function (event) {
+    if (!event.target.closest(".me")) {
+      $("profile-card").hidden = true;
+      $("profile-button").setAttribute("aria-expanded", "false");
+    }
+  });
+
+  restoreState();
+  ensureLocalSnowflakeIds();
+  persistState();
+  renderAll();
+
+  /* loading sequence, then hand off to the app */
+  var ld = $("loader");
+  var LOAD_MS = 2600;
+  app.inert = true;
+  var steps = [[0, "Connecting", 12], [700, "Loading servers", 48], [1400, "Fetching messages", 82], [2100, "Ready", 100]];
+  steps.forEach(function (s) {
+    setTimeout(function () { $("ld-label").textContent = s[1]; $("ld-fill").style.width = s[2] + "%"; }, s[0]);
+  });
+  var tips = [
+    "Say hello in #general and meet the community.",
+    "Share your favorite moments in #clips.",
+    "Need a hand? The community is always happy to help."
+  ];
+  var tipEl = $("ld-tip"), ti = 0;
+  var tipTimer = setInterval(function () {
+    tipEl.classList.add("out");
+    setTimeout(function () { ti = (ti + 1) % tips.length; tipEl.textContent = tips[ti]; tipEl.classList.remove("out"); }, 400);
+  }, 4200);
+  setTimeout(function () {
+    clearInterval(tipTimer);
+    ld.classList.add("done");
+    initializeBackend().catch(function (error) {
+      console.error("Could not initialize Supabase.", error);
+      showSignIn("Could not connect to Supabase: " + (error.message || "Unknown error"));
+    });
+    setTimeout(function () { ld.hidden = true; }, 700);
+  }, LOAD_MS);
+})();
+</script>
+
+</body></html>
