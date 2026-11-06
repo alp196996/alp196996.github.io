@@ -1,5 +1,0 @@
-# 🏷️ Placeholders
-
-<p>
-  None! 😎
-</p>
